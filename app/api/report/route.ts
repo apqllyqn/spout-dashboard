@@ -286,9 +286,10 @@ export async function GET(request: Request) {
     const activeCampaigns = campaigns.filter(c => c.emails_sent > 0);
 
     // Fetch interested replies from Inbox folder (paginated)
+    // Note: API ignores per_page and returns 15 per page, so we need many pages
     let allReplies: Reply[] = [];
     let page = 1;
-    const maxPages = 10; // Fetch up to 1000 interested replies
+    const maxPages = 100; // Fetch up to 1500 interested replies (15 per page)
 
     while (page <= maxPages) {
       try {
@@ -296,7 +297,7 @@ export async function GET(request: Request) {
         const repliesResponse = await fetchApi<{
           data: Reply[];
           meta?: { last_page: number; current_page: number }
-        }>(`/api/replies?folder=inbox&interested=1&per_page=100&page=${page}`);
+        }>(`/api/replies?folder=inbox&interested=1&page=${page}`);
 
         if (Array.isArray(repliesResponse.data)) {
           allReplies = [...allReplies, ...repliesResponse.data];
@@ -311,7 +312,11 @@ export async function GET(request: Request) {
     }
 
     // Filter for REAL interested replies (not bounces/OOO)
-    const realInterestedReplies = allReplies.filter(isRealInterest);
+    // Also filter to only include replies from campaigns in this workspace
+    const campaignIds = new Set(activeCampaigns.map(c => c.id));
+    const realInterestedReplies = allReplies.filter(reply =>
+      isRealInterest(reply) && campaignIds.has(reply.campaign_id)
+    );
 
     // Get campaign stats with subject lines
     const campaignDetailsRaw = await Promise.all(
@@ -534,7 +539,7 @@ export async function GET(request: Request) {
         leadsContacted: totalLeadsContacted,
         messagesSent: totalSent,
         avgResponseRate: parseFloat(avgResponseRate.toFixed(1)),
-        emailPositives: realInterestedReplies.length,
+        emailPositives: totalInterested, // Sum from campaign stats (authoritative)
       },
       campaigns: campaignPerformances,
       copyAnalysis,
