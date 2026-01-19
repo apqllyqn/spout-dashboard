@@ -227,13 +227,14 @@ export interface CampaignPerformance {
   grade: PerformanceGrade;
   verdict: string;
   // Extended stats for expanded view
-  emailsSent: number;
-  uniqueOpens: number;
-  uniqueReplies: number;
-  interested: number;
-  bounced: number;
-  openRate: number;
-  bounceRate: number;
+  leadsContacted?: number;
+  emailsSent?: number;
+  uniqueOpens?: number;
+  uniqueReplies?: number;
+  interested?: number;
+  bounced?: number;
+  openRate?: number;
+  bounceRate?: number;
 }
 
 // Data-driven linguistic analysis with actual metrics

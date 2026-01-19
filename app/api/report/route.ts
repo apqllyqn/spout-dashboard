@@ -288,15 +288,15 @@ export async function GET(request: Request) {
     // Fetch interested replies from Inbox folder (paginated)
     let allReplies: Reply[] = [];
     let page = 1;
-    const maxPages = 3; // Fetch up to 300 interested replies for fast initial load
+    const maxPages = 10; // Fetch up to 1000 interested replies
 
     while (page <= maxPages) {
       try {
-        // Use folder=inbox and status=interested per API spec
+        // Use folder=inbox and interested=1 for filtering interested replies
         const repliesResponse = await fetchApi<{
           data: Reply[];
           meta?: { last_page: number; current_page: number }
-        }>(`/api/replies?folder=inbox&status=interested&per_page=100&page=${page}`);
+        }>(`/api/replies?folder=inbox&interested=1&per_page=100&page=${page}`);
 
         if (Array.isArray(repliesResponse.data)) {
           allReplies = [...allReplies, ...repliesResponse.data];
@@ -342,16 +342,20 @@ export async function GET(request: Request) {
     );
 
     // Enrich campaign details with rates for analysis
-    const campaignDetails: CampaignWithSubject[] = campaignDetailsRaw.map(({ campaign, subjectLine }) => ({
-      campaign,
-      subjectLine,
-      interestRate: campaign.emails_sent > 0
-        ? parseFloat(((campaign.interested / campaign.emails_sent) * 100).toFixed(2))
-        : 0,
-      replyRate: campaign.emails_sent > 0
-        ? parseFloat(((campaign.unique_replies / campaign.emails_sent) * 100).toFixed(2))
-        : 0,
-    }));
+    // IMPORTANT: Use total_leads_contacted (unique people) not emails_sent (includes follow-ups)
+    const campaignDetails: CampaignWithSubject[] = campaignDetailsRaw.map(({ campaign, subjectLine }) => {
+      const denominator = campaign.total_leads_contacted > 0 ? campaign.total_leads_contacted : campaign.emails_sent;
+      return {
+        campaign,
+        subjectLine,
+        interestRate: denominator > 0
+          ? parseFloat(((campaign.interested / denominator) * 100).toFixed(2))
+          : 0,
+        replyRate: denominator > 0
+          ? parseFloat(((campaign.unique_replies / denominator) * 100).toFixed(2))
+          : 0,
+      };
+    });
 
     // Build campaign performances with extended stats
     const campaignPerformances: CampaignPerformance[] = campaignDetails
@@ -365,6 +369,7 @@ export async function GET(request: Request) {
         grade: getGrade(interestRate),
         verdict: getVerdict(interestRate, replyRate),
         // Extended stats for expanded view
+        leadsContacted: campaign.total_leads_contacted,
         emailsSent: campaign.emails_sent,
         uniqueOpens: campaign.unique_opens,
         uniqueReplies: campaign.unique_replies,
