@@ -215,8 +215,6 @@ export interface DashboardStats {
 }
 
 // Campaign Performance Report Types
-export type PerformanceGrade = 'highest' | 'good' | 'average' | 'poor';
-
 export interface CampaignPerformance {
   rank: number;
   id: number;
@@ -224,8 +222,6 @@ export interface CampaignPerformance {
   subjectLine: string;
   replyRate: number;
   interestRate: number;
-  grade: PerformanceGrade;
-  verdict: string;
   // Extended stats for expanded view
   leadsContacted?: number;
   emailsSent?: number;

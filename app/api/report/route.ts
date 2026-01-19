@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import type {
   Campaign,
   CampaignPerformance,
-  PerformanceGrade,
   InterestedLeadDetail,
   ReportInsight,
   PerformanceReport
@@ -118,23 +117,6 @@ function isRealInterest(reply: Reply): boolean {
   // Since we're fetching with folder=inbox&interested=1, the API has already
   // filtered for interested replies. Just return true if we pass the checks above.
   return true;
-}
-
-function getGrade(interestRate: number): PerformanceGrade {
-  if (interestRate > 5) return 'highest';
-  if (interestRate >= 2) return 'good';
-  if (interestRate >= 1) return 'average';
-  return 'poor';
-}
-
-function getVerdict(interestRate: number, replyRate: number): string {
-  if (interestRate > 5) return 'Top performer';
-  if (replyRate > 5 && interestRate >= 2) return 'Strong engagement';
-  if (interestRate >= 2) return 'Good conversion';
-  if (replyRate > 3 && interestRate < 2) return 'Replies not converting';
-  if (interestRate < 1 && replyRate < 2) return 'Needs rework';
-  if (interestRate === 0) return 'Zero interest';
-  return 'Below average';
 }
 
 function extractIndustry(lead: Lead, campaignName: string): string {
@@ -371,8 +353,6 @@ export async function GET(request: Request) {
         subjectLine,
         replyRate,
         interestRate,
-        grade: getGrade(interestRate),
-        verdict: getVerdict(interestRate, replyRate),
         // Extended stats for expanded view
         leadsContacted: campaign.total_leads_contacted,
         emailsSent: campaign.emails_sent,
@@ -441,26 +421,27 @@ export async function GET(request: Request) {
       });
     }
 
-    // Convert to array
-    const interestedLeads = Array.from(leadsMap.values());
-
-    // Skip lead enrichment on initial load for fast performance
-    // Lead data is already extracted from reply info
-
-    // Sort by date (most recent first)
-    interestedLeads.sort((a, b) => new Date(b.replyDate).getTime() - new Date(a.replyDate).getTime());
-
-    // Extract unique campaigns and industries for filters
-    const uniqueCampaigns = [...new Set(interestedLeads.map(l => l.campaign))].sort();
-    const uniqueIndustries = [...new Set(interestedLeads.map(l => l.industry))].sort();
-
-    // Aggregate metrics
+    // Aggregate metrics first (needed for lead count)
     const totalCampaigns = activeCampaigns.length;
     const totalSent = activeCampaigns.reduce((sum, c) => sum + c.emails_sent, 0);
     const totalLeadsContacted = activeCampaigns.reduce((sum, c) => sum + c.total_leads_contacted, 0);
     const totalReplies = activeCampaigns.reduce((sum, c) => sum + c.unique_replies, 0);
     const totalInterested = activeCampaigns.reduce((sum, c) => sum + c.interested, 0);
     const avgResponseRate = totalSent > 0 ? (totalReplies / totalSent) * 100 : 0;
+
+    // Convert to array and sort by date (most recent first)
+    let interestedLeads = Array.from(leadsMap.values());
+    interestedLeads.sort((a, b) => new Date(b.replyDate).getTime() - new Date(a.replyDate).getTime());
+
+    // Cap to totalInterested to match EmailBison's authoritative count
+    // The replies API may return more leads than campaign stats count
+    if (interestedLeads.length > totalInterested) {
+      interestedLeads = interestedLeads.slice(0, totalInterested);
+    }
+
+    // Extract unique campaigns and industries for filters
+    const uniqueCampaigns = [...new Set(interestedLeads.map(l => l.campaign))].sort();
+    const uniqueIndustries = [...new Set(interestedLeads.map(l => l.industry))].sort();
 
     // Generate insights
     const insights: ReportInsight[] = [];
@@ -494,13 +475,13 @@ export async function GET(request: Request) {
       });
     }
 
-    // Poor performers
-    const poorCount = campaignPerformances.filter(c => c.grade === 'poor').length;
-    if (poorCount > 2) {
+    // Low performers (below 1% interest rate)
+    const lowPerformingCount = campaignPerformances.filter(c => c.interestRate < 1).length;
+    if (lowPerformingCount > 2) {
       insights.push({
-        type: 'failure',
-        emoji: '❌',
-        headline: `${poorCount} campaigns below 1% interest`,
+        type: 'warning',
+        emoji: '⚠️',
+        headline: `${lowPerformingCount} campaigns below 1% interest`,
         detail: 'Consider A/B testing subject lines and value propositions'
       });
     }

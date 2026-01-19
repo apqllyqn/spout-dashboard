@@ -19,23 +19,6 @@ import {
   MailOpen
 } from 'lucide-react';
 
-// Grade badge component
-function GradeBadge({ grade }: { grade: CampaignPerformance['grade'] }) {
-  const config = {
-    highest: { label: '🏆 Highest', bg: 'bg-green-100', text: 'text-green-800' },
-    good: { label: '👍 Good', bg: 'bg-green-100', text: 'text-green-800' },
-    average: { label: '⚠️ Average', bg: 'bg-yellow-100', text: 'text-yellow-800' },
-    poor: { label: '👎 Poor', bg: 'bg-red-100', text: 'text-red-800' },
-  };
-  const { label, bg, text } = config[grade];
-
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${bg} ${text}`}>
-      {label}
-    </span>
-  );
-}
-
 // Insight card component - clean, professional styling
 function InsightCard({ insight }: { insight: ReportInsight }) {
   return (
@@ -145,10 +128,8 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                 <th className="h-12 px-4 text-left font-semibold text-muted-foreground w-16">Rank</th>
                 <th className="h-12 px-4 text-left font-semibold text-muted-foreground">Campaign</th>
                 <th className="h-12 px-4 text-left font-semibold text-muted-foreground">Subject Line</th>
-                <th className="h-12 px-4 text-right font-semibold text-muted-foreground">Reply</th>
-                <th className="h-12 px-4 text-right font-semibold text-muted-foreground">Interest</th>
-                <th className="h-12 px-4 text-left font-semibold text-muted-foreground">Grade</th>
-                <th className="h-12 px-4 text-left font-semibold text-muted-foreground">Verdict</th>
+                <th className="h-12 px-4 text-right font-semibold text-muted-foreground">Reply %</th>
+                <th className="h-12 px-4 text-right font-semibold text-muted-foreground">Interest %</th>
               </tr>
             </thead>
             <tbody>
@@ -177,33 +158,11 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                       </span>
                     </td>
                     <td className="p-4 text-right font-mono">{campaign.replyRate}%</td>
-                    <td className={`p-4 text-right font-mono font-bold ${
-                      campaign.grade === 'highest' || campaign.grade === 'good'
-                        ? 'text-green-600'
-                        : campaign.grade === 'poor'
-                        ? 'text-red-500'
-                        : ''
-                    }`}>
-                      {campaign.interestRate}%
-                    </td>
-                    <td className="p-4">
-                      <GradeBadge grade={campaign.grade} />
-                    </td>
-                    <td className={`p-4 text-sm font-medium ${
-                      campaign.grade === 'highest' || campaign.grade === 'good'
-                        ? 'text-green-600'
-                        : campaign.grade === 'poor'
-                        ? 'text-red-500'
-                        : campaign.grade === 'average'
-                        ? 'text-yellow-600'
-                        : 'text-muted-foreground'
-                    }`}>
-                      {campaign.verdict}
-                    </td>
+                    <td className="p-4 text-right font-mono font-bold">{campaign.interestRate}%</td>
                   </tr>
                   {expandedId === campaign.id && (
                     <tr key={`${campaign.id}-expanded`} className="bg-muted/30">
-                      <td colSpan={8} className="p-6">
+                      <td colSpan={6} className="p-6">
                         <div className="space-y-4">
                           {/* Stats Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
