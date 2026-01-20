@@ -4,7 +4,10 @@ import type {
   CampaignPerformance,
   InterestedLeadDetail,
   ReportInsight,
-  PerformanceReport
+  PerformanceReport,
+  AggregatedCopyVariant,
+  OpenerType as OpenerTypeImport,
+  CTAType as CTATypeImport,
 } from '@/lib/types/emailbison';
 
 const EMAILBISON_API_URL = process.env.EMAILBISON_API_URL || 'https://spellcast.hirecharm.com';
@@ -301,7 +304,8 @@ function findRedundantSubjects(subjects: Array<{ subject: string; interestRate: 
 }
 
 // Deep analysis of body patterns
-function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
+function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string; leadsContacted?: number; interested?: number; replies?: number; sent?: number }>): {
+  aggregated: AggregatedCopyVariant[];
   topHooks: string[];
   bottomHooks: string[];
   keyPattern: string;
@@ -317,6 +321,45 @@ function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: numb
   const midpoint = Math.ceil(sorted.length / 2);
   const top = sorted.slice(0, Math.max(3, midpoint));
   const bottom = sorted.slice(-Math.max(3, midpoint));
+
+  // === NEW: Aggregate hooks across campaigns ===
+  const hookMap = new Map<string, typeof sequences>();
+  for (const s of sequences) {
+    const hook = extractOpeningHook(s.body);
+    const key = hook.toLowerCase().substring(0, 50); // Normalize by first 50 chars
+    if (hook.length < 10) continue;
+    if (!hookMap.has(key)) hookMap.set(key, []);
+    hookMap.get(key)!.push(s);
+  }
+
+  const aggregatedHooks: AggregatedCopyVariant[] = [];
+  for (const [, seqs] of hookMap) {
+    const totalLeads = seqs.reduce((s, c) => s + (c.leadsContacted || 0), 0);
+    const totalInterested = seqs.reduce((s, c) => s + (c.interested || 0), 0);
+    const totalReplies = seqs.reduce((s, c) => s + (c.replies || 0), 0);
+    const totalSent = seqs.reduce((s, c) => s + (c.sent || 0), 0);
+    // Use unweighted avg if no leads data
+    const avgInterest = totalLeads > 0
+      ? (totalInterested / totalLeads) * 100
+      : seqs.reduce((s, c) => s + c.interestRate, 0) / seqs.length;
+
+    const openerTypes = categorizeOpener(cleanBodyText(seqs[0].body));
+
+    aggregatedHooks.push({
+      copy: extractOpeningHook(seqs[0].body),
+      appearances: seqs.length,
+      campaignNames: [...new Set(seqs.map(c => c.campaign))],
+      totalSent,
+      totalLeadsContacted: totalLeads,
+      totalInterested,
+      totalReplies,
+      weightedInterestRate: parseFloat(avgInterest.toFixed(2)),
+      weightedReplyRate: totalLeads > 0 ? parseFloat(((totalReplies / totalLeads) * 100).toFixed(2)) : 0,
+      openerType: openerTypes[0] as OpenerTypeImport,
+    });
+  }
+  aggregatedHooks.sort((a, b) => b.weightedInterestRate - a.weightedInterestRate);
+  // === END aggregation ===
 
   const topHooks = top.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
   const bottomHooks = bottom.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
@@ -402,6 +445,7 @@ function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: numb
   }
 
   return {
+    aggregated: aggregatedHooks,
     topHooks,
     bottomHooks,
     keyPattern: contrast,
@@ -416,7 +460,8 @@ function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: numb
 }
 
 // Deep analysis of CTA patterns
-function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
+function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string; leadsContacted?: number; interested?: number; replies?: number; sent?: number }>): {
+  aggregated: AggregatedCopyVariant[];
   topCTAs: string[];
   bottomCTAs: string[];
   keyPattern: string;
@@ -432,6 +477,44 @@ function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: numbe
   const midpoint = Math.ceil(sorted.length / 2);
   const top = sorted.slice(0, Math.max(3, midpoint));
   const bottom = sorted.slice(-Math.max(3, midpoint));
+
+  // === NEW: Aggregate CTAs across campaigns ===
+  const ctaMap = new Map<string, typeof sequences>();
+  for (const s of sequences) {
+    const cta = extractCTA(s.body);
+    const key = cta.toLowerCase().substring(0, 40); // Normalize by first 40 chars
+    if (cta.length < 5) continue;
+    if (!ctaMap.has(key)) ctaMap.set(key, []);
+    ctaMap.get(key)!.push(s);
+  }
+
+  const aggregatedCTAs: AggregatedCopyVariant[] = [];
+  for (const [, seqs] of ctaMap) {
+    const totalLeads = seqs.reduce((s, c) => s + (c.leadsContacted || 0), 0);
+    const totalInterested = seqs.reduce((s, c) => s + (c.interested || 0), 0);
+    const totalReplies = seqs.reduce((s, c) => s + (c.replies || 0), 0);
+    const totalSent = seqs.reduce((s, c) => s + (c.sent || 0), 0);
+    const avgInterest = totalLeads > 0
+      ? (totalInterested / totalLeads) * 100
+      : seqs.reduce((s, c) => s + c.interestRate, 0) / seqs.length;
+
+    const { type: ctaType } = categorizeCTA(extractCTA(seqs[0].body));
+
+    aggregatedCTAs.push({
+      copy: extractCTA(seqs[0].body),
+      appearances: seqs.length,
+      campaignNames: [...new Set(seqs.map(c => c.campaign))],
+      totalSent,
+      totalLeadsContacted: totalLeads,
+      totalInterested,
+      totalReplies,
+      weightedInterestRate: parseFloat(avgInterest.toFixed(2)),
+      weightedReplyRate: totalLeads > 0 ? parseFloat(((totalReplies / totalLeads) * 100).toFixed(2)) : 0,
+      ctaType: ctaType as CTATypeImport,
+    });
+  }
+  aggregatedCTAs.sort((a, b) => b.weightedInterestRate - a.weightedInterestRate);
+  // === END aggregation ===
 
   const topCTAs = top.map(s => extractCTA(s.body)).filter(c => c.length > 5);
   const bottomCTAs = bottom.map(s => extractCTA(s.body)).filter(c => c.length > 5);
@@ -495,6 +578,7 @@ function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: numbe
   }
 
   return {
+    aggregated: aggregatedCTAs,
     topCTAs,
     bottomCTAs,
     keyPattern,
@@ -510,6 +594,7 @@ function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: numbe
 
 function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
   subjects: {
+    aggregated: AggregatedCopyVariant[];
     topPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number; types: SubjectType[] }>;
     bottomPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number; types: SubjectType[] }>;
     patterns: {
@@ -532,7 +617,41 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
   const sorted = [...campaignDetails].sort((a, b) => b.interestRate - a.interestRate);
   const withInterest = sorted.filter(c => c.campaign.emails_sent >= 100);
 
-  // Deduplicate by subject line - keep best performer for each unique subject
+  // === NEW: Aggregate subjects across campaigns ===
+  const subjectMap = new Map<string, CampaignWithSubject[]>();
+  for (const c of withInterest) {
+    const key = c.subjectLine.toLowerCase().trim();
+    if (!subjectMap.has(key)) subjectMap.set(key, []);
+    subjectMap.get(key)!.push(c);
+  }
+
+  // Build aggregated subjects with weighted metrics
+  const aggregatedSubjects: AggregatedCopyVariant[] = [];
+  for (const [, campaigns] of subjectMap) {
+    const totalLeads = campaigns.reduce((s, c) => s + c.campaign.total_leads_contacted, 0);
+    const totalInterested = campaigns.reduce((s, c) => s + c.campaign.interested, 0);
+    const totalReplies = campaigns.reduce((s, c) => s + c.campaign.unique_replies, 0);
+    const totalSent = campaigns.reduce((s, c) => s + c.campaign.emails_sent, 0);
+
+    aggregatedSubjects.push({
+      copy: campaigns[0].subjectLine, // Use original casing
+      appearances: campaigns.length,
+      campaignNames: [...new Set(campaigns.map(c => c.campaign.name.split(':')[0].split('-')[0].trim()))],
+      totalSent,
+      totalLeadsContacted: totalLeads,
+      totalInterested,
+      totalReplies,
+      weightedInterestRate: totalLeads > 0 ? parseFloat(((totalInterested / totalLeads) * 100).toFixed(2)) : 0,
+      weightedReplyRate: totalLeads > 0 ? parseFloat(((totalReplies / totalLeads) * 100).toFixed(2)) : 0,
+      types: categorizeSubject(campaigns[0].subjectLine),
+    });
+  }
+
+  // Sort aggregated by weighted interest rate
+  aggregatedSubjects.sort((a, b) => b.weightedInterestRate - a.weightedInterestRate);
+  // === END aggregation ===
+
+  // Legacy: Deduplicate by subject line - keep best performer for each unique subject
   const seenSubjectsTop = new Set<string>();
   const topCampaigns = withInterest.filter(c => {
     const subjectKey = c.subjectLine.toLowerCase().trim();
@@ -652,6 +771,7 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
 
   return {
     subjects: {
+      aggregated: aggregatedSubjects,
       topPerformers: topSubjects,
       bottomPerformers: bottomSubjects,
       patterns: {
@@ -818,7 +938,15 @@ export async function GET(request: Request) {
     const copyAnalysis = buildCopyAnalysis(campaignDetails);
 
     // Fetch sequences for body/CTA analysis
-    const sequenceData: Array<{ body: string; interestRate: number; campaign: string }> = [];
+    const sequenceData: Array<{
+      body: string;
+      interestRate: number;
+      campaign: string;
+      leadsContacted?: number;
+      interested?: number;
+      replies?: number;
+      sent?: number;
+    }> = [];
     for (const detail of campaignDetails.slice(0, 9)) {
       try {
         const seqResponse = await fetchApi<{ data: SequenceStep[] }>(
@@ -829,6 +957,10 @@ export async function GET(request: Request) {
             body: seqResponse.data[0].email_body,
             interestRate: detail.interestRate,
             campaign: detail.campaign.name.split(':')[0].split('-')[0].trim(),
+            leadsContacted: detail.campaign.total_leads_contacted,
+            interested: detail.campaign.interested,
+            replies: detail.campaign.unique_replies,
+            sent: detail.campaign.emails_sent,
           });
         }
       } catch {
@@ -837,8 +969,42 @@ export async function GET(request: Request) {
     }
 
     // Add body and CTA analysis if we have sequence data
-    let bodyAnalysis = { topHooks: [] as string[], bottomHooks: [] as string[], keyPattern: '' };
-    let ctaAnalysis = { topCTAs: [] as string[], bottomCTAs: [] as string[], keyPattern: '' };
+    let bodyAnalysis: {
+      aggregated?: AggregatedCopyVariant[];
+      topHooks: string[];
+      bottomHooks: string[];
+      keyPattern: string;
+      analysis?: {
+        topOpenerTypes: Record<OpenerType, number>;
+        bottomOpenerTypes: Record<OpenerType, number>;
+        winningApproach: string;
+        failingApproach: string;
+        contrast: string;
+      };
+    } = {
+      aggregated: [],
+      topHooks: [],
+      bottomHooks: [],
+      keyPattern: ''
+    };
+    let ctaAnalysis: {
+      aggregated?: AggregatedCopyVariant[];
+      topCTAs: string[];
+      bottomCTAs: string[];
+      keyPattern: string;
+      analysis?: {
+        topCTATypes: Record<CTAType, number>;
+        bottomCTATypes: Record<CTAType, number>;
+        commitmentAnalysis: string;
+        winningCTAType: string;
+        failingCTAType: string;
+      };
+    } = {
+      aggregated: [],
+      topCTAs: [],
+      bottomCTAs: [],
+      keyPattern: ''
+    };
 
     if (sequenceData.length >= 3) {
       bodyAnalysis = analyzeBodyPatterns(sequenceData);

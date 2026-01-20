@@ -647,61 +647,74 @@ export default function ReportPage() {
                   <MessageSquare className="h-4 w-4 text-white" />
                 </div>
                 Subject Lines
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  (Deduplicated & Aggregated)
+                </span>
               </h3>
             </div>
             <div className="space-y-8 p-6">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  </div>
-                  <h4 className="font-semibold text-green-600 text-lg">Top Performers</h4>
-                  <span className="text-sm text-muted-foreground ml-auto">
-                    Avg: {report.copyAnalysis.summary.topAvgInterest}% interest
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {report.copyAnalysis.subjects.topPerformers.map((item, idx) => (
-                    <div key={idx} className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                      <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
-                        &quot;{item.subject}&quot;
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-green-600/80">
-                        <span className="font-semibold">{item.interestRate}% interest</span>
-                        <span>{item.replyRate}% reply</span>
-                        <span>{item.sent.toLocaleString()} sent</span>
-                        <span className="text-muted-foreground">• {item.campaign}</span>
-                      </div>
+              {/* Aggregated View - Unique Subjects with Combined Stats */}
+              {report.copyAnalysis.subjects.aggregated && report.copyAnalysis.subjects.aggregated.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-indigo-500" />
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center">
-                    <XCircle className="h-4 w-4 text-red-500" />
+                    <h4 className="font-semibold text-indigo-600 text-lg">Unique Subject Lines Ranked</h4>
+                    <span className="text-sm text-muted-foreground ml-auto">
+                      {report.copyAnalysis.subjects.aggregated.length} unique variants
+                    </span>
                   </div>
-                  <h4 className="font-semibold text-red-600 text-lg">Underperformers</h4>
-                  <span className="text-sm text-muted-foreground ml-auto">
-                    Avg: {report.copyAnalysis.summary.bottomAvgInterest}% interest
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {report.copyAnalysis.subjects.bottomPerformers.map((item, idx) => (
-                    <div key={idx} className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                      <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
-                        &quot;{item.subject}&quot;
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-red-600/80">
-                        <span className="font-semibold">{item.interestRate}% interest</span>
-                        <span>{item.replyRate}% reply</span>
-                        <span>{item.sent.toLocaleString()} sent</span>
-                        <span className="text-muted-foreground">• {item.campaign}</span>
+                  <div className="space-y-3">
+                    {report.copyAnalysis.subjects.aggregated.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-xl border ${
+                          idx === 0
+                            ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
+                            : idx === report.copyAnalysis.subjects.aggregated!.length - 1
+                            ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
+                            : 'bg-muted/30 border-border'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className={`text-sm font-medium mb-2 ${
+                              idx === 0 ? 'text-green-700 dark:text-green-400' :
+                              idx === report.copyAnalysis.subjects.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
+                              'text-foreground'
+                            }`}>
+                              #{idx + 1} &quot;{item.copy}&quot;
+                            </p>
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                              <span className={`font-bold ${
+                                idx === 0 ? 'text-green-600' :
+                                idx === report.copyAnalysis.subjects.aggregated!.length - 1 ? 'text-red-600' :
+                                'text-foreground'
+                              }`}>
+                                {item.weightedInterestRate}% interest
+                              </span>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
+                              <span className="text-muted-foreground">|</span>
+                              <span className="font-medium text-indigo-600">
+                                {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            {item.appearances > 1 && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Used in: {item.campaignNames.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               {/* Deep Analysis Insights */}
               {report.copyAnalysis.subjects.analysis && (
                 <div className="space-y-4">
@@ -769,7 +782,7 @@ export default function ReportPage() {
           </div>
 
           {/* Body Text Analysis */}
-          {report.copyAnalysis.body && report.copyAnalysis.body.topHooks.length > 0 && (
+          {report.copyAnalysis.body && (report.copyAnalysis.body.aggregated?.length || report.copyAnalysis.body.topHooks.length > 0) && (
             <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
               <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
                 <h3 className="flex items-center gap-3 text-lg font-bold">
@@ -780,37 +793,71 @@ export default function ReportPage() {
                 </h3>
               </div>
               <div className="space-y-8 p-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    </div>
-                    <h4 className="font-semibold text-green-600 text-lg">What Worked</h4>
-                  </div>
-                  <div className="space-y-3">
-                    {report.copyAnalysis.body.topHooks.map((hook, idx) => (
-                      <div key={idx} className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                        <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                          &quot;{hook}&quot;
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {report.copyAnalysis.body.bottomHooks.length > 0 && (
+                {/* New Aggregated View */}
+                {report.copyAnalysis.body.aggregated && report.copyAnalysis.body.aggregated.length > 0 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center">
-                        <XCircle className="h-4 w-4 text-red-500" />
+                      <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4 text-indigo-500" />
                       </div>
-                      <h4 className="font-semibold text-red-600 text-lg">What Didn&apos;t Work</h4>
+                      <h4 className="font-semibold text-indigo-600 text-lg">Unique Opening Hooks Ranked</h4>
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        {report.copyAnalysis.body.aggregated.length} unique variants
+                      </span>
                     </div>
                     <div className="space-y-3">
-                      {report.copyAnalysis.body.bottomHooks.map((hook, idx) => (
-                        <div key={idx} className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                          <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                            &quot;{hook}&quot;
-                          </p>
+                      {report.copyAnalysis.body.aggregated.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-xl border ${
+                            idx === 0
+                              ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
+                              : idx === report.copyAnalysis.body!.aggregated!.length - 1
+                              ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
+                              : 'bg-muted/30 border-border'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium mb-2 ${
+                                idx === 0 ? 'text-green-700 dark:text-green-400' :
+                                idx === report.copyAnalysis.body!.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
+                                'text-foreground'
+                              }`}>
+                                #{idx + 1} &quot;{item.copy}&quot;
+                              </p>
+                              <div className="flex flex-wrap items-center gap-3 text-xs">
+                                <span className={`font-bold ${
+                                  idx === 0 ? 'text-green-600' :
+                                  idx === report.copyAnalysis.body!.aggregated!.length - 1 ? 'text-red-600' :
+                                  'text-foreground'
+                                }`}>
+                                  {item.weightedInterestRate}% interest
+                                </span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="font-medium text-indigo-600">
+                                  {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
+                                </span>
+                                {item.openerType && (
+                                  <>
+                                    <span className="text-muted-foreground">|</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 capitalize">
+                                      {item.openerType.replace('-', ' ')}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {item.appearances > 1 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Used in: {item.campaignNames.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -850,7 +897,7 @@ export default function ReportPage() {
           )}
 
           {/* CTA Analysis */}
-          {report.copyAnalysis.cta && report.copyAnalysis.cta.topCTAs.length > 0 && (
+          {report.copyAnalysis.cta && (report.copyAnalysis.cta.aggregated?.length || report.copyAnalysis.cta.topCTAs.length > 0) && (
             <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
               <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
                 <h3 className="flex items-center gap-3 text-lg font-bold">
@@ -861,37 +908,71 @@ export default function ReportPage() {
                 </h3>
               </div>
               <div className="space-y-8 p-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 bg-green-500/10 rounded-lg flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    </div>
-                    <h4 className="font-semibold text-green-600 text-lg">What Worked</h4>
-                  </div>
-                  <div className="space-y-3">
-                    {report.copyAnalysis.cta.topCTAs.map((cta, idx) => (
-                      <div key={idx} className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                        <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                          &quot;{cta}&quot;
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {report.copyAnalysis.cta.bottomCTAs.length > 0 && (
+                {/* New Aggregated View */}
+                {report.copyAnalysis.cta.aggregated && report.copyAnalysis.cta.aggregated.length > 0 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-6 h-6 bg-red-500/10 rounded-lg flex items-center justify-center">
-                        <XCircle className="h-4 w-4 text-red-500" />
+                      <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4 text-indigo-500" />
                       </div>
-                      <h4 className="font-semibold text-red-600 text-lg">What Didn&apos;t Work</h4>
+                      <h4 className="font-semibold text-indigo-600 text-lg">Unique CTAs Ranked</h4>
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        {report.copyAnalysis.cta.aggregated.length} unique variants
+                      </span>
                     </div>
                     <div className="space-y-3">
-                      {report.copyAnalysis.cta.bottomCTAs.map((cta, idx) => (
-                        <div key={idx} className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                          <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                            &quot;{cta}&quot;
-                          </p>
+                      {report.copyAnalysis.cta.aggregated.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-xl border ${
+                            idx === 0
+                              ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
+                              : idx === report.copyAnalysis.cta!.aggregated!.length - 1
+                              ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
+                              : 'bg-muted/30 border-border'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium mb-2 ${
+                                idx === 0 ? 'text-green-700 dark:text-green-400' :
+                                idx === report.copyAnalysis.cta!.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
+                                'text-foreground'
+                              }`}>
+                                #{idx + 1} &quot;{item.copy}&quot;
+                              </p>
+                              <div className="flex flex-wrap items-center gap-3 text-xs">
+                                <span className={`font-bold ${
+                                  idx === 0 ? 'text-green-600' :
+                                  idx === report.copyAnalysis.cta!.aggregated!.length - 1 ? 'text-red-600' :
+                                  'text-foreground'
+                                }`}>
+                                  {item.weightedInterestRate}% interest
+                                </span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
+                                <span className="text-muted-foreground">|</span>
+                                <span className="font-medium text-indigo-600">
+                                  {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
+                                </span>
+                                {item.ctaType && (
+                                  <>
+                                    <span className="text-muted-foreground">|</span>
+                                    <span className="px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 capitalize">
+                                      {item.ctaType.replace('-', ' ')}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              {item.appearances > 1 && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Used in: {item.campaignNames.join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>

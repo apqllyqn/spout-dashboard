@@ -234,7 +234,23 @@ export type SubjectType = 'question' | 'benefit' | 'curiosity' | 'direct' | 'pai
 export type OpenerType = 'pain-first' | 'benefit-first' | 'question' | 'story' | 'direct-offer' | 'social-proof' | 'personalized';
 export type CTAType = 'free-offer' | 'meeting-request' | 'soft-question' | 'demo' | 'info-request' | 'urgent';
 
-// Data-driven linguistic analysis with actual metrics
+// Aggregated copy variant - deduped across campaigns
+export interface AggregatedCopyVariant {
+  copy: string;                      // The actual text
+  appearances: number;               // How many campaigns use this
+  campaignNames: string[];           // Which campaigns
+  totalSent: number;                 // Sum of emails_sent
+  totalLeadsContacted: number;       // Sum of leads_contacted
+  totalInterested: number;           // Sum of interested
+  totalReplies: number;              // Sum of unique_replies
+  weightedInterestRate: number;      // totalInterested / totalLeadsContacted * 100
+  weightedReplyRate: number;         // totalReplies / totalLeadsContacted * 100
+  types?: SubjectType[];             // For subjects only
+  openerType?: OpenerType;           // For hooks only
+  ctaType?: CTAType;                 // For CTAs only
+}
+
+// Legacy single-campaign performer (kept for backwards compat)
 export interface SubjectPerformer {
   subject: string;
   campaign: string;
@@ -245,6 +261,9 @@ export interface SubjectPerformer {
 }
 
 export interface SubjectAnalysis {
+  // New aggregated view - deduplicated with combined stats
+  aggregated?: AggregatedCopyVariant[];
+  // Legacy per-campaign view
   topPerformers: SubjectPerformer[];
   bottomPerformers: SubjectPerformer[];
   patterns: {
@@ -263,6 +282,9 @@ export interface SubjectAnalysis {
 }
 
 export interface BodyAnalysis {
+  // New aggregated view
+  aggregated?: AggregatedCopyVariant[];
+  // Legacy
   topHooks: string[];
   bottomHooks: string[];
   keyPattern: string;
@@ -276,6 +298,9 @@ export interface BodyAnalysis {
 }
 
 export interface CTAAnalysis {
+  // New aggregated view
+  aggregated?: AggregatedCopyVariant[];
+  // Legacy
   topCTAs: string[];
   bottomCTAs: string[];
   keyPattern: string;
