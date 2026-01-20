@@ -79,10 +79,9 @@ export function CampaignList({ campaigns }: CampaignListProps) {
             <TableRow>
               <TableHead>Campaign</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Sent</TableHead>
-              <TableHead className="text-right">Open Rate</TableHead>
-              <TableHead className="text-right">Reply Rate</TableHead>
-              <TableHead className="text-right">Bounce Rate</TableHead>
+              <TableHead className="text-right">Leads</TableHead>
+              <TableHead className="text-right">Interested</TableHead>
+              <TableHead className="text-right">Response Rate</TableHead>
               <TableHead className="text-right">Created</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -90,7 +89,7 @@ export function CampaignList({ campaigns }: CampaignListProps) {
           <TableBody>
             {filteredCampaigns.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   <p className="text-muted-foreground">No campaigns found</p>
                 </TableCell>
               </TableRow>
@@ -99,17 +98,9 @@ export function CampaignList({ campaigns }: CampaignListProps) {
                 const statusColor =
                   STATUS_COLORS[campaign.status.toLowerCase()] ||
                   STATUS_COLORS.draft;
-                const openRate = calcPercent(
-                  campaign.unique_opens,
+                const responseRate = calcPercent(
+                  campaign.interested,
                   campaign.total_leads_contacted
-                );
-                const replyRate = calcPercent(
-                  campaign.unique_replies,
-                  campaign.total_leads_contacted
-                );
-                const bounceRate = calcPercent(
-                  campaign.bounced,
-                  campaign.emails_sent
                 );
 
                 return (
@@ -130,16 +121,13 @@ export function CampaignList({ campaigns }: CampaignListProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(campaign.emails_sent)}
+                      {formatNumber(campaign.total_leads_contacted)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-green-600">
+                      {campaign.interested}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatPercent(openRate)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatPercent(replyRate)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatPercent(bounceRate)}
+                      {formatPercent(responseRate)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {formatDate(campaign.created_at)}
