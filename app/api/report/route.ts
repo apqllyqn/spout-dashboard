@@ -990,7 +990,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch lead details for interested replies (to get title, company, LinkedIn, etc.)
-    const leadIds = [...new Set(realInterestedReplies.map(r => r.lead_id).filter(Boolean))];
+    const leadIds = [...new Set(realInterestedReplies.map(r => r.lead_id).filter((id): id is number => id !== null))];
     const leadDetailsMap = new Map<number, Lead>();
 
     // Fetch lead details in batches of 10
