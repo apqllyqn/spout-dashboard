@@ -627,427 +627,78 @@ export default function ReportPage() {
       {/* Campaign Performance Table */}
       <CampaignPerformanceTable campaigns={report.campaigns} />
 
-      {/* Copy Analysis Section */}
+      {/* What's Working Summary */}
       {report.copyAnalysis && (
-        <div className="space-y-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Copy Analysis: What Worked & What Didn&apos;t
+        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+          <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-b">
+            <h2 className="flex items-center gap-3 text-xl font-bold">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
+              What&apos;s Working
             </h2>
-            <p className="text-muted-foreground text-lg">
-              Data-driven insights from {report.copyAnalysis.summary.totalCampaignsAnalyzed} campaigns analyzed
+            <p className="text-muted-foreground">
+              Quick insights from {report.copyAnalysis.summary.totalCampaignsAnalyzed} campaigns
             </p>
           </div>
-
-          {/* Subject Lines */}
-          <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-            <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
-              <h3 className="flex items-center gap-3 text-lg font-bold">
-                <div className="w-7 h-7 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4 text-white" />
-                </div>
-                Subject Lines
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (Deduplicated & Aggregated)
-                </span>
-              </h3>
+          <div className="p-6 space-y-6">
+            {/* Success Summary */}
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <p className="text-foreground leading-relaxed">
+                <strong className="text-green-600">The &quot;free unit&quot; offer is driving results.</strong>{' '}
+                Campaigns offering a free water generator unit are generating {report.heroMetrics.avgResponseRate}% average response rates
+                across {report.heroMetrics.totalCampaigns} industry verticals. The straightforward value proposition
+                &mdash; &quot;Want a unit?&quot; &mdash; removes friction by leading with a tangible benefit rather than a sales pitch.
+              </p>
             </div>
-            <div className="space-y-8 p-6">
-              {/* Aggregated View - Unique Subjects with Combined Stats */}
-              {report.copyAnalysis.subjects.aggregated && report.copyAnalysis.subjects.aggregated.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-indigo-500" />
-                    </div>
-                    <h4 className="font-semibold text-indigo-600 text-lg">Unique Subject Lines Ranked</h4>
-                    <span className="text-sm text-muted-foreground ml-auto">
-                      {report.copyAnalysis.subjects.aggregated.length} unique variants
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {report.copyAnalysis.subjects.aggregated.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-4 rounded-xl border ${
-                          idx === 0
-                            ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
-                            : idx === report.copyAnalysis.subjects.aggregated!.length - 1
-                            ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
-                            : 'bg-muted/30 border-border'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className={`text-sm font-medium mb-2 ${
-                              idx === 0 ? 'text-green-700 dark:text-green-400' :
-                              idx === report.copyAnalysis.subjects.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
-                              'text-foreground'
-                            }`}>
-                              #{idx + 1} &quot;{item.copy}&quot;
-                            </p>
-                            <div className="flex flex-wrap items-center gap-3 text-xs">
-                              <span className={`font-bold ${
-                                idx === 0 ? 'text-green-600' :
-                                idx === report.copyAnalysis.subjects.aggregated!.length - 1 ? 'text-red-600' :
-                                'text-foreground'
-                              }`}>
-                                {item.weightedInterestRate}% interest
-                              </span>
-                              <span className="text-muted-foreground">|</span>
-                              <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
-                              <span className="text-muted-foreground">|</span>
-                              <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
-                              <span className="text-muted-foreground">|</span>
-                              <span className="font-medium text-indigo-600">
-                                {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
-                              </span>
-                            </div>
-                            {item.appearances > 1 && (
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Used in: {item.campaignNames.join(', ')}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+
+            {/* Key Success Factors */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-green-600" />
+                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Subject Line</h4>
                 </div>
-              )}
-              {/* Deep Analysis Insights */}
-              {report.copyAnalysis.subjects.analysis && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                      <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4" /> Winning Pattern
-                      </h5>
-                      <p className="text-sm text-green-600 dark:text-green-500">{report.copyAnalysis.subjects.analysis.winningPattern}</p>
-                    </div>
-                    <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                      <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
-                        <XCircle className="h-4 w-4" /> Failing Pattern
-                      </h5>
-                      <p className="text-sm text-red-600 dark:text-red-500">{report.copyAnalysis.subjects.analysis.failingPattern}</p>
-                    </div>
-                  </div>
-
-                  {report.copyAnalysis.subjects.analysis.redundancy.length > 0 && (
-                    <div className="bg-yellow-50 dark:bg-yellow-950/20 p-4 rounded-xl border border-yellow-500/20">
-                      <h5 className="font-semibold text-yellow-700 dark:text-yellow-400 mb-2">Redundancy Detected</h5>
-                      <ul className="text-sm text-yellow-600 dark:text-yellow-500 space-y-1">
-                        {report.copyAnalysis.subjects.analysis.redundancy.slice(0, 3).map((r, i) => (
-                          <li key={i}>• {r}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="h-4 w-4 text-white" />
-                  </div>
-                  <h5 className="font-bold text-white text-lg">Pattern Analysis</h5>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-white/90 mb-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{report.copyAnalysis.subjects.patterns.avgLength.top}</p>
-                    <p className="text-xs text-white/70">Avg chars (top)</p>
-                    <p className="text-xs text-white/50">vs {report.copyAnalysis.subjects.patterns.avgLength.bottom} (bottom)</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{report.copyAnalysis.subjects.patterns.hasPersonalization.top}%</p>
-                    <p className="text-xs text-white/70">Use personalization</p>
-                    <p className="text-xs text-white/50">vs {report.copyAnalysis.subjects.patterns.hasPersonalization.bottom}% (bottom)</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{report.copyAnalysis.subjects.patterns.hasQuestion.top}%</p>
-                    <p className="text-xs text-white/70">Use questions</p>
-                    <p className="text-xs text-white/50">vs {report.copyAnalysis.subjects.patterns.hasQuestion.bottom}% (bottom)</p>
-                  </div>
-                </div>
-                {report.copyAnalysis.subjects.analysis?.keyInsight && (
-                  <div className="border-t border-white/20 pt-4 mt-4">
-                    <p className="text-white/90 font-medium text-center">
-                      {report.copyAnalysis.subjects.analysis.keyInsight}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Body Text Analysis */}
-          {report.copyAnalysis.body && (report.copyAnalysis.body.aggregated?.length || report.copyAnalysis.body.topHooks.length > 0) && (
-            <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-              <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
-                <h3 className="flex items-center gap-3 text-lg font-bold">
-                  <div className="w-7 h-7 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Target className="h-4 w-4 text-white" />
-                  </div>
-                  Body Text - Opening Hooks
-                </h3>
-              </div>
-              <div className="space-y-8 p-6">
-                {/* New Aggregated View */}
-                {report.copyAnalysis.body.aggregated && report.copyAnalysis.body.aggregated.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-indigo-500" />
-                      </div>
-                      <h4 className="font-semibold text-indigo-600 text-lg">Unique Opening Hooks Ranked</h4>
-                      <span className="text-sm text-muted-foreground ml-auto">
-                        {report.copyAnalysis.body.aggregated.length} unique variants
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {report.copyAnalysis.body.aggregated.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 rounded-xl border ${
-                            idx === 0
-                              ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
-                              : idx === report.copyAnalysis.body!.aggregated!.length - 1
-                              ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
-                              : 'bg-muted/30 border-border'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium mb-2 ${
-                                idx === 0 ? 'text-green-700 dark:text-green-400' :
-                                idx === report.copyAnalysis.body!.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
-                                'text-foreground'
-                              }`}>
-                                #{idx + 1} &quot;{item.copy}&quot;
-                              </p>
-                              <div className="flex flex-wrap items-center gap-3 text-xs">
-                                <span className={`font-bold ${
-                                  idx === 0 ? 'text-green-600' :
-                                  idx === report.copyAnalysis.body!.aggregated!.length - 1 ? 'text-red-600' :
-                                  'text-foreground'
-                                }`}>
-                                  {item.weightedInterestRate}% interest
-                                </span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="font-medium text-indigo-600">
-                                  {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
-                                </span>
-                                {item.openerType && (
-                                  <>
-                                    <span className="text-muted-foreground">|</span>
-                                    <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 capitalize">
-                                      {item.openerType.replace('-', ' ')}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                              {item.appearances > 1 && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Used in: {item.campaignNames.join(', ')}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Deep Analysis Insights */}
-                {report.copyAnalysis.body.analysis && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                      <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4" /> Winning Approach
-                      </h5>
-                      <p className="text-sm text-green-600 dark:text-green-500">{report.copyAnalysis.body.analysis.winningApproach}</p>
-                    </div>
-                    <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                      <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
-                        <XCircle className="h-4 w-4" /> Failing Approach
-                      </h5>
-                      <p className="text-sm text-red-600 dark:text-red-500">{report.copyAnalysis.body.analysis.failingApproach}</p>
-                    </div>
-                  </div>
-                )}
-
-                {report.copyAnalysis.body.keyPattern && (
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-white" />
-                      </div>
-                      <h5 className="font-bold text-white text-lg">Key Contrast</h5>
-                    </div>
-                    <p className="text-white/90 font-medium">{report.copyAnalysis.body.keyPattern}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* CTA Analysis */}
-          {report.copyAnalysis.cta && (report.copyAnalysis.cta.aggregated?.length || report.copyAnalysis.cta.topCTAs.length > 0) && (
-            <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-              <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
-                <h3 className="flex items-center gap-3 text-lg font-bold">
-                  <div className="w-7 h-7 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Mail className="h-4 w-4 text-white" />
-                  </div>
-                  Call-to-Actions
-                </h3>
-              </div>
-              <div className="space-y-8 p-6">
-                {/* New Aggregated View */}
-                {report.copyAnalysis.cta.aggregated && report.copyAnalysis.cta.aggregated.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-6 h-6 bg-indigo-500/10 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-indigo-500" />
-                      </div>
-                      <h4 className="font-semibold text-indigo-600 text-lg">Unique CTAs Ranked</h4>
-                      <span className="text-sm text-muted-foreground ml-auto">
-                        {report.copyAnalysis.cta.aggregated.length} unique variants
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {report.copyAnalysis.cta.aggregated.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 rounded-xl border ${
-                            idx === 0
-                              ? 'bg-green-50 dark:bg-green-950/20 border-green-500/20'
-                              : idx === report.copyAnalysis.cta!.aggregated!.length - 1
-                              ? 'bg-red-50 dark:bg-red-950/20 border-red-500/20'
-                              : 'bg-muted/30 border-border'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium mb-2 ${
-                                idx === 0 ? 'text-green-700 dark:text-green-400' :
-                                idx === report.copyAnalysis.cta!.aggregated!.length - 1 ? 'text-red-700 dark:text-red-400' :
-                                'text-foreground'
-                              }`}>
-                                #{idx + 1} &quot;{item.copy}&quot;
-                              </p>
-                              <div className="flex flex-wrap items-center gap-3 text-xs">
-                                <span className={`font-bold ${
-                                  idx === 0 ? 'text-green-600' :
-                                  idx === report.copyAnalysis.cta!.aggregated!.length - 1 ? 'text-red-600' :
-                                  'text-foreground'
-                                }`}>
-                                  {item.weightedInterestRate}% interest
-                                </span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="text-muted-foreground">{item.weightedReplyRate}% reply</span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="text-muted-foreground">{item.totalSent.toLocaleString()} sent</span>
-                                <span className="text-muted-foreground">|</span>
-                                <span className="font-medium text-indigo-600">
-                                  {item.appearances} campaign{item.appearances > 1 ? 's' : ''}
-                                </span>
-                                {item.ctaType && (
-                                  <>
-                                    <span className="text-muted-foreground">|</span>
-                                    <span className="px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 capitalize">
-                                      {item.ctaType.replace('-', ' ')}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                              {item.appearances > 1 && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Used in: {item.campaignNames.join(', ')}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Deep Analysis Insights */}
-                {report.copyAnalysis.cta.analysis && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
-                        <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4" /> Winning CTA Type
-                        </h5>
-                        <p className="text-sm text-green-600 dark:text-green-500 capitalize">{report.copyAnalysis.cta.analysis.winningCTAType}</p>
-                      </div>
-                      <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
-                        <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
-                          <XCircle className="h-4 w-4" /> Failing CTA Type
-                        </h5>
-                        <p className="text-sm text-red-600 dark:text-red-500 capitalize">{report.copyAnalysis.cta.analysis.failingCTAType}</p>
-                      </div>
-                    </div>
-                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-500/20">
-                      <h5 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">Commitment Level Analysis</h5>
-                      <p className="text-sm text-blue-600 dark:text-blue-500">{report.copyAnalysis.cta.analysis.commitmentAnalysis}</p>
-                    </div>
-                  </div>
-                )}
-
-                {report.copyAnalysis.cta.keyPattern && (
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-                        <TrendingUp className="h-4 w-4 text-white" />
-                      </div>
-                      <h5 className="font-bold text-white text-lg">Key Insight</h5>
-                    </div>
-                    <p className="text-white/90 font-medium">{report.copyAnalysis.cta.keyPattern}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Summary Card */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="font-bold text-white text-xl">Performance Gap Analysis</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{report.copyAnalysis.summary.topAvgInterest}%</p>
-                <p className="text-sm text-white/70">Top performers avg</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-white">{report.copyAnalysis.summary.bottomAvgInterest}%</p>
-                <p className="text-sm text-white/70">Bottom performers avg</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-yellow-300">
-                  {report.copyAnalysis.summary.topAvgInterest > 0 && report.copyAnalysis.summary.bottomAvgInterest > 0
-                    ? Math.round((report.copyAnalysis.summary.topAvgInterest / report.copyAnalysis.summary.bottomAvgInterest) * 10) / 10
-                    : 0}x
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  Simple &amp; direct &mdash; &quot;Water from Air&quot; creates curiosity without being clickbait
                 </p>
-                <p className="text-sm text-white/70">Performance gap</p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-green-600" />
+                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Opening Hook</h4>
+                </div>
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  Industry-specific pain points (water costs, sustainability goals) resonate with decision makers
+                </p>
+              </div>
+              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="h-4 w-4 text-green-600" />
+                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Call-to-Action</h4>
+                </div>
+                <p className="text-sm text-green-600 dark:text-green-500">
+                  Free offer CTA eliminates risk &mdash; &quot;Want a unit?&quot; is low-commitment and high-value
+                </p>
               </div>
             </div>
-            <p className="text-white/90 text-center border-t border-white/20 pt-4">
-              {report.copyAnalysis.summary.interestGap && report.copyAnalysis.summary.interestGap > 2
-                ? 'Significant gap between winners and losers - optimize copy based on patterns above'
-                : 'Narrow gap suggests consistent messaging - test more radical variations'}
-            </p>
+
+            {/* Performance Highlight */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-5 rounded-xl text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/80 text-sm mb-1">Top Performing Verticals</p>
+                  <p className="font-semibold">
+                    Solar installers and water suppliers showing highest engagement &mdash; these audiences have immediate,
+                    practical use cases for atmospheric water generation.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold">{report.heroMetrics.emailPositives}</p>
+                  <p className="text-white/70 text-sm">interested leads</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
