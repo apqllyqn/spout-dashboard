@@ -227,8 +227,6 @@ export interface CampaignPerformance {
   emailsSent?: number;
   uniqueReplies?: number;
   interested?: number;
-  bounced?: number;
-  bounceRate?: number;
 }
 
 // Data-driven linguistic analysis with actual metrics

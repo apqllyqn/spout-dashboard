@@ -165,7 +165,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                       <td colSpan={6} className="p-6">
                         <div className="space-y-4">
                           {/* Stats Grid */}
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Leads Reached</p>
                               <p className="font-bold text-lg">{campaign.leadsContacted?.toLocaleString() || 0}</p>
@@ -181,14 +181,6 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Interested</p>
                               <p className="font-bold text-lg text-green-600">{campaign.interested?.toLocaleString() || 0}</p>
-                            </div>
-                            <div className="bg-card rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground mb-1">Bounced</p>
-                              <p className="font-bold text-lg text-red-500">{campaign.bounced?.toLocaleString() || 0}</p>
-                            </div>
-                            <div className="bg-card rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground mb-1">Bounce Rate</p>
-                              <p className="font-bold text-lg">{campaign.bounceRate || 0}%</p>
                             </div>
                           </div>
 

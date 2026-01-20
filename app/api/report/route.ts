@@ -362,10 +362,6 @@ export async function GET(request: Request) {
         emailsSent: campaign.emails_sent,
         uniqueReplies: campaign.unique_replies,
         interested: campaign.interested,
-        bounced: campaign.bounced,
-        bounceRate: campaign.emails_sent > 0
-          ? parseFloat(((campaign.bounced / campaign.emails_sent) * 100).toFixed(2))
-          : 0,
       }))
       .sort((a, b) => b.interestRate - a.interestRate)
       .map((c, i) => ({ ...c, rank: i + 1 }));
@@ -425,10 +421,11 @@ export async function GET(request: Request) {
     const totalCampaigns = activeCampaigns.length;
     const totalSent = activeCampaigns.reduce((sum, c) => sum + c.emails_sent, 0);
     const totalLeadsContacted = activeCampaigns.reduce((sum, c) => sum + c.total_leads_contacted, 0);
-    const totalReplies = activeCampaigns.reduce((sum, c) => sum + c.unique_replies, 0);
     const totalInterested = activeCampaigns.reduce((sum, c) => sum + c.interested, 0);
-    // Use total_leads_contacted (unique people) not emails_sent (includes follow-ups)
-    const avgResponseRate = totalLeadsContacted > 0 ? (totalReplies / totalLeadsContacted) * 100 : 0;
+    // Simple average of campaign reply rates (not weighted by volume)
+    const avgResponseRate = campaignPerformances.length > 0
+      ? campaignPerformances.reduce((sum, c) => sum + c.replyRate, 0) / campaignPerformances.length
+      : 0;
 
     // Convert to array and sort by date (most recent first)
     let interestedLeads = Array.from(leadsMap.values());
