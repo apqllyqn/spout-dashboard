@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Mail, Settings, FileText } from 'lucide-react';
+import { Mail, Settings, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuthStore } from '@/lib/stores';
 
 const navigation = [
-  { name: 'Overview', href: '/', icon: LayoutDashboard },
   { name: 'Campaigns', href: '/campaigns', icon: Mail },
   { name: 'Report', href: '/report', icon: FileText },
   { name: 'Settings', href: '/settings', icon: Settings },

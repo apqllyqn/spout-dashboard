@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation';
 
 const pageTitles: Record<string, string> = {
-  '/': 'Overview',
   '/campaigns': 'Campaigns',
   '/settings': 'Settings',
+  '/report': 'Report',
 };
 
 export function Header() {
