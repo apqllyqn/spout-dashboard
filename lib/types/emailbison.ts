@@ -229,6 +229,11 @@ export interface CampaignPerformance {
   interested?: number;
 }
 
+// Subject line categorization types
+export type SubjectType = 'question' | 'benefit' | 'curiosity' | 'direct' | 'pain' | 'personalized';
+export type OpenerType = 'pain-first' | 'benefit-first' | 'question' | 'story' | 'direct-offer' | 'social-proof' | 'personalized';
+export type CTAType = 'free-offer' | 'meeting-request' | 'soft-question' | 'demo' | 'info-request' | 'urgent';
+
 // Data-driven linguistic analysis with actual metrics
 export interface SubjectPerformer {
   subject: string;
@@ -236,6 +241,7 @@ export interface SubjectPerformer {
   interestRate: number;
   replyRate: number;
   sent: number;
+  types?: SubjectType[];
 }
 
 export interface SubjectAnalysis {
@@ -243,8 +249,16 @@ export interface SubjectAnalysis {
   bottomPerformers: SubjectPerformer[];
   patterns: {
     avgLength: { top: number; bottom: number };
-    hasPersonalization: { top: number; bottom: number }; // % with {{variables}}
-    hasQuestion: { top: number; bottom: number }; // % ending in ?
+    hasPersonalization: { top: number; bottom: number };
+    hasQuestion: { top: number; bottom: number };
+  };
+  analysis?: {
+    topTypeBreakdown: Record<SubjectType, number>;
+    bottomTypeBreakdown: Record<SubjectType, number>;
+    winningPattern: string;
+    failingPattern: string;
+    redundancy: string[];
+    keyInsight: string;
   };
 }
 
@@ -252,12 +266,26 @@ export interface BodyAnalysis {
   topHooks: string[];
   bottomHooks: string[];
   keyPattern: string;
+  analysis?: {
+    topOpenerTypes: Record<OpenerType, number>;
+    bottomOpenerTypes: Record<OpenerType, number>;
+    winningApproach: string;
+    failingApproach: string;
+    contrast: string;
+  };
 }
 
 export interface CTAAnalysis {
   topCTAs: string[];
   bottomCTAs: string[];
   keyPattern: string;
+  analysis?: {
+    topCTATypes: Record<CTAType, number>;
+    bottomCTATypes: Record<CTAType, number>;
+    commitmentAnalysis: string;
+    winningCTAType: string;
+    failingCTAType: string;
+  };
 }
 
 export interface CopyAnalysis {
@@ -268,6 +296,7 @@ export interface CopyAnalysis {
     topAvgInterest: number;
     bottomAvgInterest: number;
     totalCampaignsAnalyzed: number;
+    interestGap?: number;
   };
 }
 

@@ -702,6 +702,37 @@ export default function ReportPage() {
                   ))}
                 </div>
               </div>
+              {/* Deep Analysis Insights */}
+              {report.copyAnalysis.subjects.analysis && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                      <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" /> Winning Pattern
+                      </h5>
+                      <p className="text-sm text-green-600 dark:text-green-500">{report.copyAnalysis.subjects.analysis.winningPattern}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
+                      <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
+                        <XCircle className="h-4 w-4" /> Failing Pattern
+                      </h5>
+                      <p className="text-sm text-red-600 dark:text-red-500">{report.copyAnalysis.subjects.analysis.failingPattern}</p>
+                    </div>
+                  </div>
+
+                  {report.copyAnalysis.subjects.analysis.redundancy.length > 0 && (
+                    <div className="bg-yellow-50 dark:bg-yellow-950/20 p-4 rounded-xl border border-yellow-500/20">
+                      <h5 className="font-semibold text-yellow-700 dark:text-yellow-400 mb-2">Redundancy Detected</h5>
+                      <ul className="text-sm text-yellow-600 dark:text-yellow-500 space-y-1">
+                        {report.copyAnalysis.subjects.analysis.redundancy.slice(0, 3).map((r, i) => (
+                          <li key={i}>• {r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
@@ -709,7 +740,7 @@ export default function ReportPage() {
                   </div>
                   <h5 className="font-bold text-white text-lg">Pattern Analysis</h5>
                 </div>
-                <div className="grid grid-cols-3 gap-4 text-white/90">
+                <div className="grid grid-cols-3 gap-4 text-white/90 mb-4">
                   <div className="text-center">
                     <p className="text-2xl font-bold">{report.copyAnalysis.subjects.patterns.avgLength.top}</p>
                     <p className="text-xs text-white/70">Avg chars (top)</p>
@@ -726,6 +757,13 @@ export default function ReportPage() {
                     <p className="text-xs text-white/50">vs {report.copyAnalysis.subjects.patterns.hasQuestion.bottom}% (bottom)</p>
                   </div>
                 </div>
+                {report.copyAnalysis.subjects.analysis?.keyInsight && (
+                  <div className="border-t border-white/20 pt-4 mt-4">
+                    <p className="text-white/90 font-medium text-center">
+                      {report.copyAnalysis.subjects.analysis.keyInsight}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -778,13 +816,31 @@ export default function ReportPage() {
                     </div>
                   </div>
                 )}
+                {/* Deep Analysis Insights */}
+                {report.copyAnalysis.body.analysis && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                      <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" /> Winning Approach
+                      </h5>
+                      <p className="text-sm text-green-600 dark:text-green-500">{report.copyAnalysis.body.analysis.winningApproach}</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
+                      <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
+                        <XCircle className="h-4 w-4" /> Failing Approach
+                      </h5>
+                      <p className="text-sm text-red-600 dark:text-red-500">{report.copyAnalysis.body.analysis.failingApproach}</p>
+                    </div>
+                  </div>
+                )}
+
                 {report.copyAnalysis.body.keyPattern && (
                   <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
                         <TrendingUp className="h-4 w-4 text-white" />
                       </div>
-                      <h5 className="font-bold text-white text-lg">Key Pattern</h5>
+                      <h5 className="font-bold text-white text-lg">Key Contrast</h5>
                     </div>
                     <p className="text-white/90 font-medium">{report.copyAnalysis.body.keyPattern}</p>
                   </div>
@@ -841,13 +897,37 @@ export default function ReportPage() {
                     </div>
                   </div>
                 )}
+                {/* Deep Analysis Insights */}
+                {report.copyAnalysis.cta.analysis && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+                        <h5 className="font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" /> Winning CTA Type
+                        </h5>
+                        <p className="text-sm text-green-600 dark:text-green-500 capitalize">{report.copyAnalysis.cta.analysis.winningCTAType}</p>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-500/20">
+                        <h5 className="font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
+                          <XCircle className="h-4 w-4" /> Failing CTA Type
+                        </h5>
+                        <p className="text-sm text-red-600 dark:text-red-500 capitalize">{report.copyAnalysis.cta.analysis.failingCTAType}</p>
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-500/20">
+                      <h5 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">Commitment Level Analysis</h5>
+                      <p className="text-sm text-blue-600 dark:text-blue-500">{report.copyAnalysis.cta.analysis.commitmentAnalysis}</p>
+                    </div>
+                  </div>
+                )}
+
                 {report.copyAnalysis.cta.keyPattern && (
                   <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
                         <TrendingUp className="h-4 w-4 text-white" />
                       </div>
-                      <h5 className="font-bold text-white text-lg">Key Pattern</h5>
+                      <h5 className="font-bold text-white text-lg">Key Insight</h5>
                     </div>
                     <p className="text-white/90 font-medium">{report.copyAnalysis.cta.keyPattern}</p>
                   </div>
@@ -862,14 +942,30 @@ export default function ReportPage() {
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
-              <h3 className="font-bold text-white text-xl">Key Takeaway</h3>
+              <h3 className="font-bold text-white text-xl">Performance Gap Analysis</h3>
             </div>
-            <p className="text-white/90 text-lg">
-              Top campaigns average <span className="font-bold">{report.copyAnalysis.summary.topAvgInterest}%</span> interest
-              vs <span className="font-bold">{report.copyAnalysis.summary.bottomAvgInterest}%</span> for bottom performers
-              — a <span className="font-bold">{report.copyAnalysis.summary.topAvgInterest > 0 && report.copyAnalysis.summary.bottomAvgInterest > 0
-                ? Math.round((report.copyAnalysis.summary.topAvgInterest / report.copyAnalysis.summary.bottomAvgInterest) * 10) / 10
-                : 0}x</span> difference.
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">{report.copyAnalysis.summary.topAvgInterest}%</p>
+                <p className="text-sm text-white/70">Top performers avg</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">{report.copyAnalysis.summary.bottomAvgInterest}%</p>
+                <p className="text-sm text-white/70">Bottom performers avg</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-yellow-300">
+                  {report.copyAnalysis.summary.topAvgInterest > 0 && report.copyAnalysis.summary.bottomAvgInterest > 0
+                    ? Math.round((report.copyAnalysis.summary.topAvgInterest / report.copyAnalysis.summary.bottomAvgInterest) * 10) / 10
+                    : 0}x
+                </p>
+                <p className="text-sm text-white/70">Performance gap</p>
+              </div>
+            </div>
+            <p className="text-white/90 text-center border-t border-white/20 pt-4">
+              {report.copyAnalysis.summary.interestGap && report.copyAnalysis.summary.interestGap > 2
+                ? 'Significant gap between winners and losers - optimize copy based on patterns above'
+                : 'Narrow gap suggests consistent messaging - test more radical variations'}
             </p>
           </div>
         </div>

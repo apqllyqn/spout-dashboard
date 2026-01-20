@@ -152,122 +152,385 @@ interface SequenceStep {
   thread_reply: boolean;
 }
 
-// Extract opening hook from email body (first meaningful line)
-function extractOpeningHook(htmlBody: string): string {
-  // Remove HTML tags and get text
-  const text = htmlBody
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\{[^}|]+\|[^}]+\}/g, (match) => match.split('|')[0].replace('{', '')) // Take first spin variant
-    .replace(/\{([^}]+)\}/g, '$1') // Remove remaining braces
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // Get first sentence or first 100 chars
-  const firstSentence = text.split(/[.!?]/)[0]?.trim() || '';
-  return firstSentence.length > 100 ? firstSentence.substring(0, 100) + '...' : firstSentence;
-}
-
-// Extract CTA from email body (last question or call to action)
-function extractCTA(htmlBody: string): string {
-  const text = htmlBody
+// Clean HTML body to plain text
+function cleanBodyText(htmlBody: string): string {
+  return htmlBody
     .replace(/<[^>]*>/g, ' ')
     .replace(/\{[^}|]+\|[^}]+\}/g, (match) => match.split('|')[0].replace('{', ''))
     .replace(/\{([^}]+)\}/g, '$1')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-
-  // Find questions (CTAs are often questions)
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  const questions = sentences.filter(s => s.includes('?'));
-
-  if (questions.length > 0) {
-    // Return last question (usually the CTA)
-    return questions[questions.length - 1].trim();
-  }
-
-  // If no questions, return last sentence
-  const lastSentence = sentences[sentences.length - 1]?.trim() || '';
-  return lastSentence.length > 100 ? lastSentence.substring(0, 100) + '...' : lastSentence;
 }
 
-// Analyze body text patterns from sequences
+// Extract opening hook from email body (first meaningful line)
+function extractOpeningHook(htmlBody: string): string {
+  const text = cleanBodyText(htmlBody);
+  const firstSentence = text.split(/[.!?]/)[0]?.trim() || '';
+  return firstSentence.length > 120 ? firstSentence.substring(0, 120) + '...' : firstSentence;
+}
+
+// Extract CTA from email body (last question or call to action)
+function extractCTA(htmlBody: string): string {
+  const text = cleanBodyText(htmlBody);
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const questions = sentences.filter(s => s.includes('?'));
+  if (questions.length > 0) {
+    return questions[questions.length - 1].trim();
+  }
+  const lastSentence = sentences[sentences.length - 1]?.trim() || '';
+  return lastSentence.length > 120 ? lastSentence.substring(0, 120) + '...' : lastSentence;
+}
+
+// Categorize subject line type
+type SubjectType = 'question' | 'benefit' | 'curiosity' | 'direct' | 'pain' | 'personalized';
+function categorizeSubject(subject: string): SubjectType[] {
+  const lower = subject.toLowerCase();
+  const types: SubjectType[] = [];
+
+  if (subject.includes('?')) types.push('question');
+  if (lower.includes('{{') || lower.includes('first_name') || lower.includes('company')) types.push('personalized');
+  if (lower.match(/free|save|increase|boost|grow|improve|x\s*roi|%/)) types.push('benefit');
+  if (lower.match(/struggling|problem|issue|pain|frustrated|tired of/)) types.push('pain');
+  if (lower.match(/this|quick|idea|thought|re:|fwd:/i)) types.push('curiosity');
+  if (types.length === 0) types.push('direct');
+
+  return types;
+}
+
+// Categorize opener type
+type OpenerType = 'pain-first' | 'benefit-first' | 'question' | 'story' | 'direct-offer' | 'social-proof' | 'personalized';
+function categorizeOpener(text: string): OpenerType[] {
+  const lower = text.toLowerCase();
+  const types: OpenerType[] = [];
+
+  // Check for personalization first
+  if (lower.includes('first_name') || lower.includes('{{') || lower.match(/^(hey|hi)\s+\w+/)) {
+    types.push('personalized');
+  }
+
+  // Pain-first: starts with problem
+  if (lower.match(/^(struggling|frustrated|tired|sick of|dealing with|if you're|most |many )/)) {
+    types.push('pain-first');
+  }
+
+  // Benefit-first: starts with result/value
+  if (lower.match(/^(we |our |i |just |recently |we've |i've ).*?(help|save|increase|grow|boost)/)) {
+    types.push('benefit-first');
+  }
+
+  // Question opener
+  if (text.split(/[.!]/)[0]?.includes('?')) {
+    types.push('question');
+  }
+
+  // Direct offer
+  if (lower.match(/^(want|would you|can i|let me|i'd like to)/)) {
+    types.push('direct-offer');
+  }
+
+  // Social proof / story
+  if (lower.match(/(we just|we recently|one of our|a client|a company|working with)/)) {
+    types.push('story');
+  }
+
+  if (lower.match(/(\d+%|\d+x|roi|companies|clients|results)/)) {
+    types.push('social-proof');
+  }
+
+  if (types.length === 0) types.push('direct-offer');
+  return types;
+}
+
+// Categorize CTA type
+type CTAType = 'free-offer' | 'meeting-request' | 'soft-question' | 'demo' | 'info-request' | 'urgent';
+function categorizeCTA(text: string): { type: CTAType; commitment: 'low' | 'medium' | 'high' } {
+  const lower = text.toLowerCase();
+
+  // Free offer (lowest commitment)
+  if (lower.match(/send you|free|sample|try|unit|test|complimentary/)) {
+    return { type: 'free-offer', commitment: 'low' };
+  }
+
+  // Soft question (low commitment)
+  if (lower.match(/^(want|interested|would you|open to|curious)/i) && text.includes('?')) {
+    return { type: 'soft-question', commitment: 'low' };
+  }
+
+  // Info request (medium)
+  if (lower.match(/learn more|more info|details|send.*info/)) {
+    return { type: 'info-request', commitment: 'medium' };
+  }
+
+  // Demo (medium-high)
+  if (lower.match(/demo|show you|walk.*through/)) {
+    return { type: 'demo', commitment: 'medium' };
+  }
+
+  // Meeting request (high commitment)
+  if (lower.match(/call|chat|meeting|schedule|book|15 min|30 min|time/)) {
+    return { type: 'meeting-request', commitment: 'high' };
+  }
+
+  // Urgent
+  if (lower.match(/today|now|asap|this week|limited/)) {
+    return { type: 'urgent', commitment: 'high' };
+  }
+
+  return { type: 'soft-question', commitment: 'medium' };
+}
+
+// Find similar/redundant subjects
+function findRedundantSubjects(subjects: Array<{ subject: string; interestRate: number }>): string[] {
+  const redundant: string[] = [];
+  const normalized = subjects.map(s => ({
+    ...s,
+    normalized: s.subject.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).sort().join(' ')
+  }));
+
+  const seen = new Map<string, number>();
+  for (const s of normalized) {
+    const key = s.normalized.substring(0, 30); // First 30 chars as key
+    if (seen.has(key)) {
+      redundant.push(`"${s.subject}" similar to previous`);
+    } else {
+      seen.set(key, s.interestRate);
+    }
+  }
+  return redundant;
+}
+
+// Deep analysis of body patterns
 function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
   topHooks: string[];
   bottomHooks: string[];
   keyPattern: string;
+  analysis: {
+    topOpenerTypes: Record<OpenerType, number>;
+    bottomOpenerTypes: Record<OpenerType, number>;
+    winningApproach: string;
+    failingApproach: string;
+    contrast: string;
+  };
 } {
-  // Sort by interest rate
   const sorted = [...sequences].sort((a, b) => b.interestRate - a.interestRate);
-  const top = sorted.slice(0, 3);
-  const bottom = sorted.slice(-3);
+  const midpoint = Math.ceil(sorted.length / 2);
+  const top = sorted.slice(0, Math.max(3, midpoint));
+  const bottom = sorted.slice(-Math.max(3, midpoint));
 
   const topHooks = top.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
   const bottomHooks = bottom.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
 
-  // Analyze patterns
-  const topHasQuestion = top.filter(s => s.body.includes('?')).length;
-  const bottomHasQuestion = bottom.filter(s => s.body.includes('?')).length;
+  // Categorize openers
+  const topOpenerTypes: Record<OpenerType, number> = {
+    'pain-first': 0, 'benefit-first': 0, 'question': 0, 'story': 0,
+    'direct-offer': 0, 'social-proof': 0, 'personalized': 0
+  };
+  const bottomOpenerTypes: Record<OpenerType, number> = { ...topOpenerTypes };
 
-  const topHasNumbers = top.filter(s => /\d+/.test(s.body)).length;
-  const bottomHasNumbers = bottom.filter(s => /\d+/.test(s.body)).length;
-
-  let keyPattern = 'Direct value proposition with specific details';
-  if (topHasQuestion > bottomHasQuestion) {
-    keyPattern = 'Questions that challenge assumptions > Statements';
+  for (const s of top) {
+    const types = categorizeOpener(cleanBodyText(s.body));
+    types.forEach(t => topOpenerTypes[t]++);
   }
-  if (topHasNumbers > bottomHasNumbers) {
-    keyPattern = 'Specific numbers/metrics > Vague claims';
+  for (const s of bottom) {
+    const types = categorizeOpener(cleanBodyText(s.body));
+    types.forEach(t => bottomOpenerTypes[t]++);
   }
 
-  return { topHooks, bottomHooks, keyPattern };
+  // Find the dominant winning type
+  const topSorted = Object.entries(topOpenerTypes).sort((a, b) => b[1] - a[1]);
+  const bottomSorted = Object.entries(bottomOpenerTypes).sort((a, b) => b[1] - a[1]);
+
+  const winningType = topSorted[0]?.[0] || 'direct-offer';
+  const losingType = bottomSorted[0]?.[0] || 'direct-offer';
+
+  // Build contrast insight
+  let contrast = '';
+  let winningApproach = '';
+  let failingApproach = '';
+
+  // Check for personalization difference
+  const topPersonalized = topOpenerTypes['personalized'];
+  const bottomPersonalized = bottomOpenerTypes['personalized'];
+  if (topPersonalized > bottomPersonalized + 1) {
+    contrast = 'Personalized openers significantly outperform generic ones';
+    winningApproach = `${topPersonalized}/${top.length} top performers use personalization`;
+  } else if (bottomPersonalized > topPersonalized + 1) {
+    contrast = 'Personalization alone isn\'t driving results - value prop matters more';
+  }
+
+  // Check for question vs statement
+  const topQuestions = topOpenerTypes['question'];
+  const bottomQuestions = bottomOpenerTypes['question'];
+  if (topQuestions > bottomQuestions + 1) {
+    contrast = contrast || 'Question-based openers create curiosity and drive engagement';
+    winningApproach = winningApproach || `Questions work: ${topQuestions}/${top.length} winners vs ${bottomQuestions}/${bottom.length} losers`;
+  }
+
+  // Check for direct offers
+  const topDirectOffer = topOpenerTypes['direct-offer'];
+  const bottomDirectOffer = bottomOpenerTypes['direct-offer'];
+  if (topDirectOffer > bottomDirectOffer + 1) {
+    contrast = contrast || 'Direct, clear value props outperform clever copy';
+  } else if (bottomDirectOffer > topDirectOffer + 1) {
+    failingApproach = `Direct pitches underperform: ${bottomDirectOffer}/${bottom.length} in low performers`;
+  }
+
+  // Social proof check
+  if (topOpenerTypes['social-proof'] > bottomOpenerTypes['social-proof']) {
+    winningApproach = winningApproach || 'Social proof elements (numbers, client mentions) boost credibility';
+  }
+
+  // Default insights if none found
+  if (!contrast) {
+    if (winningType === losingType) {
+      // Same dominant type in both - no differentiation
+      contrast = `All campaigns use similar ${winningType.replace('-', ' ')} openers. Test different approaches: pain-first, question-based, or social proof.`;
+    } else {
+      contrast = `${winningType.replace('-', ' ')} openers trending higher than ${losingType.replace('-', ' ')}`;
+    }
+  }
+  if (!winningApproach) {
+    winningApproach = `Top approach: ${winningType.replace('-', ' ')} (${topSorted[0]?.[1] || 0}/${top.length} top campaigns)`;
+  }
+  if (!failingApproach) {
+    if (winningType === losingType) {
+      failingApproach = `No clear failing pattern - all campaigns use ${losingType.replace('-', ' ')} openers`;
+    } else {
+      failingApproach = `Underperforming: ${losingType.replace('-', ' ')} heavy in bottom ${bottom.length} campaigns`;
+    }
+  }
+
+  return {
+    topHooks,
+    bottomHooks,
+    keyPattern: contrast,
+    analysis: {
+      topOpenerTypes,
+      bottomOpenerTypes,
+      winningApproach,
+      failingApproach,
+      contrast,
+    }
+  };
 }
 
-// Analyze CTA patterns from sequences
+// Deep analysis of CTA patterns
 function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
   topCTAs: string[];
   bottomCTAs: string[];
   keyPattern: string;
+  analysis: {
+    topCTATypes: Record<CTAType, number>;
+    bottomCTATypes: Record<CTAType, number>;
+    commitmentAnalysis: string;
+    winningCTAType: string;
+    failingCTAType: string;
+  };
 } {
   const sorted = [...sequences].sort((a, b) => b.interestRate - a.interestRate);
-  const top = sorted.slice(0, 3);
-  const bottom = sorted.slice(-3);
+  const midpoint = Math.ceil(sorted.length / 2);
+  const top = sorted.slice(0, Math.max(3, midpoint));
+  const bottom = sorted.slice(-Math.max(3, midpoint));
 
   const topCTAs = top.map(s => extractCTA(s.body)).filter(c => c.length > 5);
   const bottomCTAs = bottom.map(s => extractCTA(s.body)).filter(c => c.length > 5);
 
-  // Analyze CTA patterns
-  const topHasOffer = top.filter(s =>
-    s.body.toLowerCase().includes('send') ||
-    s.body.toLowerCase().includes('free') ||
-    s.body.toLowerCase().includes('sample')
-  ).length;
+  // Categorize CTAs
+  const topCTATypes: Record<CTAType, number> = {
+    'free-offer': 0, 'meeting-request': 0, 'soft-question': 0,
+    'demo': 0, 'info-request': 0, 'urgent': 0
+  };
+  const bottomCTATypes: Record<CTAType, number> = { ...topCTATypes };
 
-  const topIsQuestion = topCTAs.filter(c => c.includes('?')).length;
+  let topLowCommit = 0, topHighCommit = 0;
+  let bottomLowCommit = 0, bottomHighCommit = 0;
 
-  let keyPattern = 'Clear next step with low commitment';
-  if (topHasOffer > 1) {
-    keyPattern = 'Free offer/sample CTA > Generic meeting request';
+  for (const s of top) {
+    const cta = extractCTA(s.body);
+    const { type, commitment } = categorizeCTA(cta);
+    topCTATypes[type]++;
+    if (commitment === 'low') topLowCommit++;
+    if (commitment === 'high') topHighCommit++;
   }
-  if (topIsQuestion > 1) {
-    keyPattern = 'Permission-based questions > Direct demands';
+
+  for (const s of bottom) {
+    const cta = extractCTA(s.body);
+    const { type, commitment } = categorizeCTA(cta);
+    bottomCTATypes[type]++;
+    if (commitment === 'low') bottomLowCommit++;
+    if (commitment === 'high') bottomHighCommit++;
   }
 
-  return { topCTAs, bottomCTAs, keyPattern };
+  // Find winning/losing CTA types
+  const topSorted = Object.entries(topCTATypes).sort((a, b) => b[1] - a[1]);
+  const bottomSorted = Object.entries(bottomCTATypes).sort((a, b) => b[1] - a[1]);
+
+  const winningCTAType = topSorted[0]?.[0] || 'soft-question';
+  const failingCTAType = bottomSorted[0]?.[0] || 'meeting-request';
+
+  // Commitment level analysis
+  let commitmentAnalysis = '';
+  if (topLowCommit > topHighCommit && bottomHighCommit > bottomLowCommit) {
+    commitmentAnalysis = `Low-commitment CTAs dominate winners (${topLowCommit}/${top.length}). High-commitment asks failing (${bottomHighCommit}/${bottom.length} in bottom).`;
+  } else if (topHighCommit > topLowCommit) {
+    commitmentAnalysis = `High-commitment CTAs working for this audience - they're ready to engage.`;
+  } else {
+    commitmentAnalysis = `Mixed commitment levels - test more low-friction asks like free samples/trials.`;
+  }
+
+  // Key pattern
+  let keyPattern = '';
+  if (topCTATypes['free-offer'] > bottomCTATypes['free-offer'] + 1) {
+    keyPattern = 'Free offer/sample CTAs dramatically outperform meeting requests';
+  } else if (topCTATypes['soft-question'] > bottomCTATypes['soft-question'] + 1) {
+    keyPattern = 'Permission-based questions ("Want a...?") beat direct asks';
+  } else if (bottomCTATypes['meeting-request'] > topCTATypes['meeting-request'] + 1) {
+    keyPattern = 'Meeting/call requests underperforming - reduce friction with softer asks';
+  } else if (winningCTAType === failingCTAType) {
+    // Same CTA type in both - no differentiation to analyze
+    keyPattern = `All campaigns use ${winningCTAType} CTAs - test different approaches (demos, meetings, info requests) to find what converts better`;
+  } else {
+    keyPattern = `${winningCTAType.replace('-', ' ')} CTAs trending higher than ${failingCTAType.replace('-', ' ')}`;
+  }
+
+  return {
+    topCTAs,
+    bottomCTAs,
+    keyPattern,
+    analysis: {
+      topCTATypes,
+      bottomCTATypes,
+      commitmentAnalysis,
+      winningCTAType: winningCTAType.replace('-', ' '),
+      failingCTAType: failingCTAType.replace('-', ' '),
+    }
+  };
 }
 
 function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
   subjects: {
-    topPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number }>;
-    bottomPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number }>;
-    patterns: { avgLength: { top: number; bottom: number }; hasPersonalization: { top: number; bottom: number }; hasQuestion: { top: number; bottom: number } };
+    topPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number; types: SubjectType[] }>;
+    bottomPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number; types: SubjectType[] }>;
+    patterns: {
+      avgLength: { top: number; bottom: number };
+      hasPersonalization: { top: number; bottom: number };
+      hasQuestion: { top: number; bottom: number };
+    };
+    analysis: {
+      topTypeBreakdown: Record<SubjectType, number>;
+      bottomTypeBreakdown: Record<SubjectType, number>;
+      winningPattern: string;
+      failingPattern: string;
+      redundancy: string[];
+      keyInsight: string;
+    };
   };
-  summary: { topAvgInterest: number; bottomAvgInterest: number; totalCampaignsAnalyzed: number };
+  summary: { topAvgInterest: number; bottomAvgInterest: number; totalCampaignsAnalyzed: number; interestGap: number };
 } {
   // Sort campaigns by interest rate
   const sorted = [...campaignDetails].sort((a, b) => b.interestRate - a.interestRate);
-  const withInterest = sorted.filter(c => c.campaign.emails_sent >= 100); // Only analyze campaigns with meaningful volume
+  const withInterest = sorted.filter(c => c.campaign.emails_sent >= 100);
 
   // Deduplicate by subject line - keep best performer for each unique subject
   const seenSubjectsTop = new Set<string>();
@@ -288,13 +551,14 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
     return true;
   }).slice(0, 5);
 
-  // Build subject line analysis
+  // Build subject line analysis with types
   const topSubjects = topCampaigns.map(c => ({
     subject: c.subjectLine,
     campaign: c.campaign.name.split(':')[0].split('-')[0].trim(),
     interestRate: c.interestRate,
     replyRate: c.replyRate,
     sent: c.campaign.emails_sent,
+    types: categorizeSubject(c.subjectLine),
   }));
 
   const bottomSubjects = bottomCampaigns.map(c => ({
@@ -303,15 +567,73 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
     interestRate: c.interestRate,
     replyRate: c.replyRate,
     sent: c.campaign.emails_sent,
+    types: categorizeSubject(c.subjectLine),
   }));
 
-  // Calculate subject patterns
+  // Calculate type breakdowns
+  const topTypeBreakdown: Record<SubjectType, number> = {
+    question: 0, benefit: 0, curiosity: 0, direct: 0, pain: 0, personalized: 0
+  };
+  const bottomTypeBreakdown: Record<SubjectType, number> = { ...topTypeBreakdown };
+
+  topSubjects.forEach(s => s.types.forEach(t => topTypeBreakdown[t]++));
+  bottomSubjects.forEach(s => s.types.forEach(t => bottomTypeBreakdown[t]++));
+
+  // Find winning/failing patterns
+  const topSorted = Object.entries(topTypeBreakdown).sort((a, b) => b[1] - a[1]);
+  const bottomSorted = Object.entries(bottomTypeBreakdown).sort((a, b) => b[1] - a[1]);
+
+  let winningPattern = '';
+  let failingPattern = '';
+  let keyInsight = '';
+
+  // Analyze contrasts
+  if (topTypeBreakdown.question > bottomTypeBreakdown.question + 1) {
+    winningPattern = `Question subjects dominate winners (${topTypeBreakdown.question}/${topSubjects.length})`;
+  } else if (topTypeBreakdown.benefit > bottomTypeBreakdown.benefit + 1) {
+    winningPattern = `Benefit-focused subjects drive interest (${topTypeBreakdown.benefit}/${topSubjects.length})`;
+  } else if (topTypeBreakdown.curiosity > bottomTypeBreakdown.curiosity + 1) {
+    winningPattern = `Curiosity-gap subjects outperform (${topTypeBreakdown.curiosity}/${topSubjects.length})`;
+  } else {
+    winningPattern = `Top pattern: ${topSorted[0]?.[0] || 'direct'} (${topSorted[0]?.[1] || 0}/${topSubjects.length})`;
+  }
+
+  if (bottomTypeBreakdown.direct > topTypeBreakdown.direct + 1) {
+    failingPattern = `Generic direct subjects underperform (${bottomTypeBreakdown.direct}/${bottomSubjects.length})`;
+  } else if (bottomTypeBreakdown.benefit > topTypeBreakdown.benefit + 1) {
+    failingPattern = `Benefit claims not resonating - try specificity (${bottomTypeBreakdown.benefit}/${bottomSubjects.length})`;
+  } else {
+    failingPattern = `Bottom heavy with: ${bottomSorted[0]?.[0] || 'direct'} (${bottomSorted[0]?.[1] || 0}/${bottomSubjects.length})`;
+  }
+
+  // Check for redundancy FIRST - it's the most important finding
+  const allSubjects = withInterest.map(c => ({ subject: c.subjectLine, interestRate: c.interestRate }));
+  const redundancy = findRedundantSubjects(allSubjects);
+
+  // Check for personalization impact
+  if (redundancy.length >= withInterest.length * 0.5) {
+    // More than 50% redundancy - this is the main issue
+    keyInsight = `CRITICAL: ${redundancy.length + 1} campaigns use the same subject line. Cannot analyze patterns without variation - test diverse subject lines.`;
+  } else if (topTypeBreakdown.personalized > bottomTypeBreakdown.personalized) {
+    keyInsight = 'Personalization correlates with higher interest - use {{first_name}} and company variables';
+  } else if (topTypeBreakdown.question > bottomTypeBreakdown.question) {
+    keyInsight = 'Questions create engagement - test more subject lines ending with "?"';
+  } else if (topTypeBreakdown.curiosity > bottomTypeBreakdown.curiosity) {
+    keyInsight = 'Curiosity gaps work - "Quick thought" or "This" outperform explicit subjects';
+  } else if (topSorted[0]?.[0] === bottomSorted[0]?.[0]) {
+    // Same type dominates both - no differentiation
+    keyInsight = `All campaigns use ${topSorted[0]?.[0] || 'direct'} subjects - test questions, benefits, or curiosity-gap approaches for comparison`;
+  } else {
+    keyInsight = 'No clear winning formula - run A/B tests on question vs benefit approaches';
+  }
+
+  // Calculate metrics
   const calcAvgLength = (subjects: typeof topSubjects) =>
     subjects.length ? Math.round(subjects.reduce((sum, s) => sum + s.subject.length, 0) / subjects.length) : 0;
 
   const calcPersonalization = (subjects: typeof topSubjects) => {
     if (!subjects.length) return 0;
-    const withVars = subjects.filter(s => s.subject.includes('{{') || s.subject.includes('{{')).length;
+    const withVars = subjects.filter(s => s.subject.includes('{{') || s.subject.toLowerCase().includes('first_name')).length;
     return Math.round((withVars / subjects.length) * 100);
   };
 
@@ -320,6 +642,13 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
     const withQuestion = subjects.filter(s => s.subject.includes('?')).length;
     return Math.round((withQuestion / subjects.length) * 100);
   };
+
+  const topAvgInterest = topCampaigns.length
+    ? parseFloat((topCampaigns.reduce((s, c) => s + c.interestRate, 0) / topCampaigns.length).toFixed(2))
+    : 0;
+  const bottomAvgInterest = bottomCampaigns.length
+    ? parseFloat((bottomCampaigns.reduce((s, c) => s + c.interestRate, 0) / bottomCampaigns.length).toFixed(2))
+    : 0;
 
   return {
     subjects: {
@@ -330,15 +659,20 @@ function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
         hasPersonalization: { top: calcPersonalization(topSubjects), bottom: calcPersonalization(bottomSubjects) },
         hasQuestion: { top: calcQuestion(topSubjects), bottom: calcQuestion(bottomSubjects) },
       },
+      analysis: {
+        topTypeBreakdown,
+        bottomTypeBreakdown,
+        winningPattern,
+        failingPattern,
+        redundancy,
+        keyInsight,
+      },
     },
     summary: {
-      topAvgInterest: topCampaigns.length
-        ? parseFloat((topCampaigns.reduce((s, c) => s + c.interestRate, 0) / topCampaigns.length).toFixed(2))
-        : 0,
-      bottomAvgInterest: bottomCampaigns.length
-        ? parseFloat((bottomCampaigns.reduce((s, c) => s + c.interestRate, 0) / bottomCampaigns.length).toFixed(2))
-        : 0,
+      topAvgInterest,
+      bottomAvgInterest,
       totalCampaignsAnalyzed: withInterest.length,
+      interestGap: parseFloat((topAvgInterest - bottomAvgInterest).toFixed(2)),
     },
   };
 }
