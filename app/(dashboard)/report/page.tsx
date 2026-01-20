@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { PageContainer } from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PerformanceReport, CampaignPerformance, ReportInsight, InterestedLeadDetail } from '@/lib/types/emailbison';
+import type { PerformanceReport, CampaignPerformance, InterestedLeadDetail } from '@/lib/types/emailbison';
 import {
   TrendingUp,
   Users,
@@ -12,24 +12,8 @@ import {
   Mail,
   Search,
   ChevronDown,
-  Calendar,
-  Building2,
-  MailOpen,
   CheckCircle,
-  XCircle
 } from 'lucide-react';
-
-// Insight card component - clean, professional styling
-function InsightCard({ insight }: { insight: ReportInsight }) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4 hover:bg-muted/30 transition-colors">
-      <h4 className="font-semibold text-foreground mb-2">
-        {insight.emoji} {insight.headline}
-      </h4>
-      <p className="text-sm text-muted-foreground">{insight.detail}</p>
-    </div>
-  );
-}
 
 // Hero metric card component
 function HeroMetricCard({
@@ -79,7 +63,7 @@ interface SequenceStep {
 function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformance[] }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sequenceData, setSequenceData] = useState<Record<number, SequenceStep[]>>({});
-  const [loadingSequence, setLoadingSequence] = useState<number | null>(null);
+  const [loading, setLoading] = useState<number | null>(null);
 
   // Lazy load sequence when expanding
   const handleExpand = async (campaignId: number) => {
@@ -92,7 +76,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
 
     // Only fetch if we don't have it cached
     if (!sequenceData[campaignId]) {
-      setLoadingSequence(campaignId);
+      setLoading(campaignId);
       try {
         const response = await fetch(`/api/emailbison/campaigns/${campaignId}/sequence`);
         if (response.ok) {
@@ -102,7 +86,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
       } catch (error) {
         console.error('Failed to fetch sequence:', error);
       } finally {
-        setLoadingSequence(null);
+        setLoading(null);
       }
     }
   };
@@ -180,7 +164,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                             </div>
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Interested</p>
-                              <p className="font-bold text-lg text-green-600">{campaign.interested?.toLocaleString() || 0}</p>
+                              <p className="font-bold text-lg text-blue-600">{campaign.interested?.toLocaleString() || 0}</p>
                             </div>
                           </div>
 
@@ -193,10 +177,10 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                               </div>
                             </div>
                             <div className="p-4">
-                              {loadingSequence === campaign.id ? (
+                              {loading === campaign.id ? (
                                 <div className="flex items-center justify-center py-8">
                                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-                                  <span className="ml-2 text-sm text-muted-foreground">Loading sequence...</span>
+                                  <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
                                 </div>
                               ) : sequenceData[campaign.id] && sequenceData[campaign.id].length > 0 ? (
                                 <div className="space-y-4">
@@ -224,7 +208,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                                             <span>{step.sent?.toLocaleString()} sent</span>
                                           )}
                                           {step.reply_rate !== undefined && (
-                                            <span className="font-medium text-green-600">{step.reply_rate}% reply</span>
+                                            <span className="font-medium text-blue-600">{step.reply_rate}% reply</span>
                                           )}
                                           {(step.delay_days || step.delay_hours) && (
                                             <span>
@@ -257,13 +241,13 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                                             {step.unique_replies !== undefined && (
                                               <div>
                                                 <span className="text-muted-foreground">Replies: </span>
-                                                <span className="font-medium text-green-600">{step.unique_replies}</span>
+                                                <span className="font-medium text-blue-600">{step.unique_replies}</span>
                                               </div>
                                             )}
                                             {step.interested !== undefined && (
                                               <div>
                                                 <span className="text-muted-foreground">Interested: </span>
-                                                <span className="font-medium text-green-600">{step.interested}</span>
+                                                <span className="font-medium text-blue-600">{step.interested}</span>
                                               </div>
                                             )}
                                             {step.bounced !== undefined && (
@@ -297,7 +281,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                             <p className="text-sm text-muted-foreground">
                               Reached <span className="font-semibold text-foreground">{campaign.leadsContacted?.toLocaleString() || 0}</span> leads
                               → <span className="font-semibold text-foreground">{campaign.uniqueReplies?.toLocaleString() || 0}</span> replied ({campaign.replyRate}%)
-                              → <span className="font-semibold text-green-600">{campaign.interested?.toLocaleString() || 0}</span> interested ({campaign.interestRate}%)
+                              → <span className="font-semibold text-blue-600">{campaign.interested?.toLocaleString() || 0}</span> interested ({campaign.interestRate}%)
                             </p>
                           </div>
                         </div>
@@ -328,47 +312,39 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// Apollo-style Leads Explorer component
-function LeadsExplorer({
-  leads,
-  filters,
-}: {
-  leads: InterestedLeadDetail[];
-  filters: { campaigns: string[]; industries: string[] };
-}) {
+// Leads List with industry filter
+function LeadsList({ leads, industries }: { leads: InterestedLeadDetail[]; industries: string[] }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [campaignFilter, setCampaignFilter] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          lead.name.toLowerCase().includes(query) ||
-          lead.email.toLowerCase().includes(query) ||
-          lead.company.toLowerCase().includes(query) ||
-          lead.replyPreview.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-      }
-
-      // Campaign filter
-      if (campaignFilter && lead.campaign !== campaignFilter) return false;
-
       // Industry filter
       if (industryFilter && lead.industry !== industryFilter) return false;
 
+      // Search filter - search across all text fields
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const searchFields = [
+          lead.name,
+          lead.email,
+          lead.company,
+          lead.campaign,
+          lead.title,
+          lead.industry,
+          lead.replyPreview,
+        ].join(' ').toLowerCase();
+        return searchFields.includes(query);
+      }
       return true;
     });
-  }, [leads, searchQuery, campaignFilter, industryFilter]);
+  }, [leads, searchQuery, industryFilter]);
 
   return (
     <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-      {/* Header with search and filters */}
-      <div className="flex flex-col space-y-1.5 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* Header */}
+      <div className="flex flex-col gap-3 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 border-b">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
               <Users className="h-4 w-4 text-white" />
@@ -376,17 +352,17 @@ function LeadsExplorer({
             <h3 className="text-lg font-bold">
               Interested Leads
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({filteredLeads.length} of {leads.length})
+                ({filteredLeads.length})
               </span>
             </h3>
           </div>
 
           {/* Search bar */}
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search leads..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-9 pl-9 pr-3 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -394,113 +370,73 @@ function LeadsExplorer({
           </div>
         </div>
 
-        {/* Filter pills */}
-        <div className="flex items-center gap-2 pt-2">
-          <div className="relative">
-            <select
-              value={campaignFilter}
-              onChange={(e) => setCampaignFilter(e.target.value)}
-              className="h-8 pl-3 pr-8 text-xs rounded-full border border-border bg-background appearance-none cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="">All Campaigns</option>
-              {filters.campaigns.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-          </div>
-
-          <div className="relative">
-            <select
-              value={industryFilter}
-              onChange={(e) => setIndustryFilter(e.target.value)}
-              className="h-8 pl-3 pr-8 text-xs rounded-full border border-border bg-background appearance-none cursor-pointer hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="">All Industries</option>
-              {filters.industries.map((i) => (
-                <option key={i} value={i}>{i}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
-          </div>
-
-          {(campaignFilter || industryFilter || searchQuery) && (
+        {/* Industry filter tabs */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setIndustryFilter('')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+              !industryFilter
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-700 border'
+            }`}
+          >
+            All
+          </button>
+          {industries.map((industry) => (
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setCampaignFilter('');
-                setIndustryFilter('');
-              }}
-              className="h-8 px-3 text-xs rounded-full border border-border bg-background hover:bg-muted/50 text-muted-foreground"
+              key={industry}
+              onClick={() => setIndustryFilter(industry)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                industryFilter === industry
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-700 border'
+              }`}
             >
-              Clear filters
+              {industry}
             </button>
-          )}
+          ))}
         </div>
       </div>
 
       {/* Leads table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 bg-card">
             <tr className="border-b bg-muted/30">
               <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Contact</th>
               <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Company</th>
-              <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Campaign</th>
-              <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Reply</th>
+              <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Industry</th>
+              <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider">Reply Preview</th>
               <th className="h-10 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wider w-24">Date</th>
             </tr>
           </thead>
           <tbody>
-            {filteredLeads.slice(0, 50).map((lead) => (
-              <tr
-                key={lead.replyId}
-                className="hover:bg-muted/30 border-b border-border/50 cursor-pointer transition-colors"
-                onClick={() => setExpandedId(expandedId === lead.replyId ? null : lead.replyId)}
-              >
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                      {lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">{lead.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{lead.email}</p>
-                    </div>
-                  </div>
-                </td>
+            {filteredLeads.map((lead) => (
+              <tr key={lead.replyId} className="hover:bg-muted/30 border-b border-border/50">
                 <td className="py-3 px-4">
                   <div className="min-w-0">
-                    <p className="font-medium truncate flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      {lead.company}
-                    </p>
-                    {lead.title && (
-                      <p className="text-xs text-muted-foreground truncate">{lead.title}</p>
-                    )}
+                    <p className="font-medium text-foreground">{lead.name}</p>
+                    {lead.title && <p className="text-xs text-blue-600">{lead.title}</p>}
+                    <p className="text-xs text-muted-foreground">{lead.email}</p>
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400 w-fit">
-                      {lead.campaign}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{lead.industry}</span>
-                  </div>
-                </td>
-                <td className="py-3 px-4 max-w-[200px]">
-                  <div className="flex items-start gap-1.5">
-                    <MailOpen className="h-3.5 w-3.5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <p className={`text-xs ${expandedId === lead.replyId ? '' : 'line-clamp-2'} text-muted-foreground`}>
-                      {lead.replyPreview || 'Interested'}
-                    </p>
-                  </div>
+                  <p className="font-medium">{lead.company}</p>
                 </td>
                 <td className="py-3 px-4">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
+                  <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">
+                    {lead.industry}
+                  </span>
+                </td>
+                <td className="py-3 px-4 max-w-[250px]">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {lead.replyPreview || 'Interested'}
+                  </p>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="text-xs text-muted-foreground">
                     {formatRelativeTime(lead.replyDate)}
-                  </div>
+                  </span>
                 </td>
               </tr>
             ))}
@@ -510,13 +446,7 @@ function LeadsExplorer({
         {filteredLeads.length === 0 && (
           <div className="py-12 text-center text-muted-foreground">
             <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No leads match your filters</p>
-          </div>
-        )}
-
-        {filteredLeads.length > 50 && (
-          <div className="py-3 px-4 text-center text-sm text-muted-foreground bg-muted/20 border-t">
-            Showing 50 of {filteredLeads.length} leads. Use search to find specific leads.
+            <p>No leads found</p>
           </div>
         )}
       </div>
@@ -567,13 +497,6 @@ export default function ReportPage() {
 
   return (
     <PageContainer className="space-y-8 pb-12">
-      {/* Campaign Period */}
-      <div className="text-center">
-        <p className="text-lg font-semibold text-muted-foreground">
-          Campaign Period: {report.startDate} - {report.endDate}
-        </p>
-      </div>
-
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-700 text-white rounded-3xl p-8 shadow-xl">
         <div className="flex items-center justify-between mb-8">
@@ -630,9 +553,9 @@ export default function ReportPage() {
       {/* What's Working Summary */}
       {report.copyAnalysis && (
         <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-b">
+          <div className="flex flex-col space-y-1.5 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-b">
             <h2 className="flex items-center gap-3 text-xl font-bold">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
                 <CheckCircle className="h-5 w-5 text-white" />
               </div>
               What&apos;s Working
@@ -645,7 +568,7 @@ export default function ReportPage() {
             {/* Success Summary */}
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <p className="text-foreground leading-relaxed">
-                <strong className="text-green-600">The &quot;free unit&quot; offer is driving results.</strong>{' '}
+                <strong className="text-blue-600">The &quot;free unit&quot; offer is driving results.</strong>{' '}
                 Campaigns offering a free water generator unit are generating {report.heroMetrics.avgResponseRate}% average response rates
                 across {report.heroMetrics.totalCampaigns} industry verticals. The straightforward value proposition
                 &mdash; &quot;Want a unit?&quot; &mdash; removes friction by leading with a tangible benefit rather than a sales pitch.
@@ -654,37 +577,37 @@ export default function ReportPage() {
 
             {/* Key Success Factors */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="h-4 w-4 text-green-600" />
-                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Subject Line</h4>
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <h4 className="font-semibold text-blue-700 dark:text-blue-400 text-sm">Subject Line</h4>
                 </div>
-                <p className="text-sm text-green-600 dark:text-green-500">
+                <p className="text-sm text-blue-600 dark:text-blue-500">
                   Simple &amp; direct &mdash; &quot;Water from Air&quot; creates curiosity without being clickbait
                 </p>
               </div>
-              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Target className="h-4 w-4 text-green-600" />
-                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Opening Hook</h4>
+                  <Target className="h-4 w-4 text-blue-600" />
+                  <h4 className="font-semibold text-blue-700 dark:text-blue-400 text-sm">Opening Hook</h4>
                 </div>
-                <p className="text-sm text-green-600 dark:text-green-500">
+                <p className="text-sm text-blue-600 dark:text-blue-500">
                   Industry-specific pain points (water costs, sustainability goals) resonate with decision makers
                 </p>
               </div>
-              <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-xl border border-green-500/20">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-500/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <Mail className="h-4 w-4 text-green-600" />
-                  <h4 className="font-semibold text-green-700 dark:text-green-400 text-sm">Call-to-Action</h4>
+                  <Mail className="h-4 w-4 text-blue-600" />
+                  <h4 className="font-semibold text-blue-700 dark:text-blue-400 text-sm">Call-to-Action</h4>
                 </div>
-                <p className="text-sm text-green-600 dark:text-green-500">
+                <p className="text-sm text-blue-600 dark:text-blue-500">
                   Free offer CTA eliminates risk &mdash; &quot;Want a unit?&quot; is low-commitment and high-value
                 </p>
               </div>
             </div>
 
             {/* Performance Highlight */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-5 rounded-xl text-white">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 rounded-xl text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-white/80 text-sm mb-1">Top Performing Verticals</p>
@@ -703,25 +626,16 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* Apollo-style Leads Explorer */}
+      {/* Interested Leads */}
       {report.interestedLeads.length > 0 && (
         <div>
           <h2 className="text-3xl font-bold text-foreground mb-6">
-            Interested Leads Explorer
+            Interested Leads
           </h2>
-          <LeadsExplorer leads={report.interestedLeads} filters={report.filters} />
+          <LeadsList leads={report.interestedLeads} industries={report.filters.industries} />
         </div>
       )}
 
-      {/* Key Insights */}
-      <div>
-        <h2 className="text-3xl font-bold text-foreground mb-6">Key Insights</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {report.insights.map((insight, index) => (
-            <InsightCard key={index} insight={insight} />
-          ))}
-        </div>
-      </div>
     </PageContainer>
   );
 }

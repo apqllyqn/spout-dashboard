@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function OverviewPage() {
-  redirect('/campaigns');
+export default function HomePage() {
+  redirect('/report');
 }

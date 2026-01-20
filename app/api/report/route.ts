@@ -75,51 +75,9 @@ async function postApi<T>(endpoint: string, body: object): Promise<T> {
   return response.json();
 }
 
-// Filter out bounce/auto-reply messages and find real interest
+// Trust EmailBison's interested flag - no custom filtering
 function isRealInterest(reply: Reply): boolean {
-  const subject = reply.subject.toLowerCase();
-  const body = (reply.text_body || '').toLowerCase();
-  const fromEmail = reply.from_email_address.toLowerCase();
-
-  // If marked as automated reply by the system, skip it
-  if (reply.automated_reply) {
-    return false;
-  }
-
-  // Exclude mail server bounces by email
-  if (fromEmail.includes('postmaster') || fromEmail.includes('mailer-daemon') ||
-      fromEmail.includes('noreply@') || fromEmail.includes('no-reply@')) {
-    return false;
-  }
-
-  // Exclude bounces by subject
-  if (subject.includes('undeliverable') || subject.includes('delivery status') ||
-      subject.includes('delivery failed') || subject.includes('returned mail')) {
-    return false;
-  }
-
-  // Exclude bounces by body content
-  if (body.includes('delivery has failed') ||
-      body.includes('message could not be delivered') ||
-      body.includes('550 ') || body.includes('554 ')) {
-    return false;
-  }
-
-  // Exclude out of office
-  if (subject.includes('out of office') || subject.includes('automatic reply') ||
-      body.includes('out of office') || body.includes('i am currently out')) {
-    return false;
-  }
-
-  // Exclude clear negative responses
-  if (body.includes('unsubscribe me') || body.includes('remove me from') ||
-      body.includes('stop emailing me') || body.includes('not interested')) {
-    return false;
-  }
-
-  // Since we're fetching with folder=inbox&interested=1, the API has already
-  // filtered for interested replies. Just return true if we pass the checks above.
-  return true;
+  return reply.interested === true;
 }
 
 function extractIndustry(lead: Lead, campaignName: string): string {
@@ -1031,24 +989,51 @@ export async function GET(request: Request) {
       return 'Other';
     }
 
+    // Fetch lead details for interested replies (to get title, company, LinkedIn, etc.)
+    const leadIds = [...new Set(realInterestedReplies.map(r => r.lead_id).filter(Boolean))];
+    const leadDetailsMap = new Map<number, Lead>();
+
+    // Fetch lead details in batches of 10
+    for (let i = 0; i < Math.min(leadIds.length, 100); i += 10) {
+      const batch = leadIds.slice(i, i + 10);
+      const leadPromises = batch.map(async (leadId) => {
+        try {
+          const response = await fetchApi<{ data: Lead }>(`/api/leads/${leadId}`);
+          if (response.data) {
+            leadDetailsMap.set(leadId, response.data);
+          }
+        } catch {
+          // Skip if lead fetch fails
+        }
+      });
+      await Promise.all(leadPromises);
+    }
+
     // Build lead details from replies (dedupe by email)
     for (const reply of realInterestedReplies) {
       const email = reply.from_email_address.toLowerCase();
       if (leadsMap.has(email)) continue; // Skip duplicates
 
       const campaignName = campaignMap.get(reply.campaign_id) || 'Unknown Campaign';
+      const leadDetail = reply.lead_id ? leadDetailsMap.get(reply.lead_id) : null;
 
-      // Extract company from email domain
-      const domain = email.split('@')[1] || '';
-      const companyFromDomain = domain.split('.')[0] || '';
-      const company = companyFromDomain.charAt(0).toUpperCase() + companyFromDomain.slice(1);
+      // Use lead details if available, otherwise extract from email/reply
+      const company = leadDetail?.company || (() => {
+        const domain = email.split('@')[1] || '';
+        const companyFromDomain = domain.split('.')[0] || '';
+        return companyFromDomain.charAt(0).toUpperCase() + companyFromDomain.slice(1);
+      })();
+
+      const name = leadDetail
+        ? `${leadDetail.first_name} ${leadDetail.last_name}`.trim()
+        : reply.from_name || email.split('@')[0];
 
       leadsMap.set(email, {
         id: reply.lead_id || reply.id,
         email,
-        name: reply.from_name || email.split('@')[0],
+        name,
         company,
-        title: '',
+        title: leadDetail?.title || '',
         industry: extractIndustryFromCampaign(campaignName),
         campaign: campaignName.split(':')[0].split('-')[0].trim(),
         campaignId: reply.campaign_id,
@@ -1063,21 +1048,18 @@ export async function GET(request: Request) {
     const totalCampaigns = activeCampaigns.length;
     const totalSent = activeCampaigns.reduce((sum, c) => sum + c.emails_sent, 0);
     const totalLeadsContacted = activeCampaigns.reduce((sum, c) => sum + c.total_leads_contacted, 0);
-    const totalInterested = activeCampaigns.reduce((sum, c) => sum + c.interested, 0);
     // Simple average of campaign reply rates (not weighted by volume)
     const avgResponseRate = campaignPerformances.length > 0
       ? campaignPerformances.reduce((sum, c) => sum + c.replyRate, 0) / campaignPerformances.length
       : 0;
 
     // Convert to array and sort by date (most recent first)
-    let interestedLeads = Array.from(leadsMap.values());
+    const interestedLeads = Array.from(leadsMap.values());
     interestedLeads.sort((a, b) => new Date(b.replyDate).getTime() - new Date(a.replyDate).getTime());
 
-    // Cap to totalInterested to match EmailBison's authoritative count
-    // The replies API may return more leads than campaign stats count
-    if (interestedLeads.length > totalInterested) {
-      interestedLeads = interestedLeads.slice(0, totalInterested);
-    }
+    // Use unique lead count (deduped by email) as the authoritative interested count
+    // Campaign stats may double-count people who replied to multiple campaigns
+    const totalInterested = interestedLeads.length;
 
     // Extract unique campaigns and industries for filters
     const uniqueCampaigns = [...new Set(interestedLeads.map(l => l.campaign))].sort();
