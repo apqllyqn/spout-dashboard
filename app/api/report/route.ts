@@ -144,6 +144,119 @@ interface CampaignWithSubject {
   replyRate: number;
 }
 
+interface SequenceStep {
+  id: number;
+  email_subject: string;
+  email_body: string;
+  order: number;
+  thread_reply: boolean;
+}
+
+// Extract opening hook from email body (first meaningful line)
+function extractOpeningHook(htmlBody: string): string {
+  // Remove HTML tags and get text
+  const text = htmlBody
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\{[^}|]+\|[^}]+\}/g, (match) => match.split('|')[0].replace('{', '')) // Take first spin variant
+    .replace(/\{([^}]+)\}/g, '$1') // Remove remaining braces
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Get first sentence or first 100 chars
+  const firstSentence = text.split(/[.!?]/)[0]?.trim() || '';
+  return firstSentence.length > 100 ? firstSentence.substring(0, 100) + '...' : firstSentence;
+}
+
+// Extract CTA from email body (last question or call to action)
+function extractCTA(htmlBody: string): string {
+  const text = htmlBody
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\{[^}|]+\|[^}]+\}/g, (match) => match.split('|')[0].replace('{', ''))
+    .replace(/\{([^}]+)\}/g, '$1')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Find questions (CTAs are often questions)
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const questions = sentences.filter(s => s.includes('?'));
+
+  if (questions.length > 0) {
+    // Return last question (usually the CTA)
+    return questions[questions.length - 1].trim();
+  }
+
+  // If no questions, return last sentence
+  const lastSentence = sentences[sentences.length - 1]?.trim() || '';
+  return lastSentence.length > 100 ? lastSentence.substring(0, 100) + '...' : lastSentence;
+}
+
+// Analyze body text patterns from sequences
+function analyzeBodyPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
+  topHooks: string[];
+  bottomHooks: string[];
+  keyPattern: string;
+} {
+  // Sort by interest rate
+  const sorted = [...sequences].sort((a, b) => b.interestRate - a.interestRate);
+  const top = sorted.slice(0, 3);
+  const bottom = sorted.slice(-3);
+
+  const topHooks = top.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
+  const bottomHooks = bottom.map(s => extractOpeningHook(s.body)).filter(h => h.length > 10);
+
+  // Analyze patterns
+  const topHasQuestion = top.filter(s => s.body.includes('?')).length;
+  const bottomHasQuestion = bottom.filter(s => s.body.includes('?')).length;
+
+  const topHasNumbers = top.filter(s => /\d+/.test(s.body)).length;
+  const bottomHasNumbers = bottom.filter(s => /\d+/.test(s.body)).length;
+
+  let keyPattern = 'Direct value proposition with specific details';
+  if (topHasQuestion > bottomHasQuestion) {
+    keyPattern = 'Questions that challenge assumptions > Statements';
+  }
+  if (topHasNumbers > bottomHasNumbers) {
+    keyPattern = 'Specific numbers/metrics > Vague claims';
+  }
+
+  return { topHooks, bottomHooks, keyPattern };
+}
+
+// Analyze CTA patterns from sequences
+function analyzeCTAPatterns(sequences: Array<{ body: string; interestRate: number; campaign: string }>): {
+  topCTAs: string[];
+  bottomCTAs: string[];
+  keyPattern: string;
+} {
+  const sorted = [...sequences].sort((a, b) => b.interestRate - a.interestRate);
+  const top = sorted.slice(0, 3);
+  const bottom = sorted.slice(-3);
+
+  const topCTAs = top.map(s => extractCTA(s.body)).filter(c => c.length > 5);
+  const bottomCTAs = bottom.map(s => extractCTA(s.body)).filter(c => c.length > 5);
+
+  // Analyze CTA patterns
+  const topHasOffer = top.filter(s =>
+    s.body.toLowerCase().includes('send') ||
+    s.body.toLowerCase().includes('free') ||
+    s.body.toLowerCase().includes('sample')
+  ).length;
+
+  const topIsQuestion = topCTAs.filter(c => c.includes('?')).length;
+
+  let keyPattern = 'Clear next step with low commitment';
+  if (topHasOffer > 1) {
+    keyPattern = 'Free offer/sample CTA > Generic meeting request';
+  }
+  if (topIsQuestion > 1) {
+    keyPattern = 'Permission-based questions > Direct demands';
+  }
+
+  return { topCTAs, bottomCTAs, keyPattern };
+}
+
 function buildCopyAnalysis(campaignDetails: CampaignWithSubject[]): {
   subjects: {
     topPerformers: Array<{ subject: string; campaign: string; interestRate: number; replyRate: number; sent: number }>;
@@ -370,6 +483,34 @@ export async function GET(request: Request) {
     // Build data-driven copy analysis
     const copyAnalysis = buildCopyAnalysis(campaignDetails);
 
+    // Fetch sequences for body/CTA analysis
+    const sequenceData: Array<{ body: string; interestRate: number; campaign: string }> = [];
+    for (const detail of campaignDetails.slice(0, 9)) {
+      try {
+        const seqResponse = await fetchApi<{ data: SequenceStep[] }>(
+          `/api/campaigns/${detail.campaign.id}/sequence-steps`
+        );
+        if (seqResponse.data?.[0]?.email_body) {
+          sequenceData.push({
+            body: seqResponse.data[0].email_body,
+            interestRate: detail.interestRate,
+            campaign: detail.campaign.name.split(':')[0].split('-')[0].trim(),
+          });
+        }
+      } catch {
+        // Skip if sequence not available
+      }
+    }
+
+    // Add body and CTA analysis if we have sequence data
+    let bodyAnalysis = { topHooks: [] as string[], bottomHooks: [] as string[], keyPattern: '' };
+    let ctaAnalysis = { topCTAs: [] as string[], bottomCTAs: [] as string[], keyPattern: '' };
+
+    if (sequenceData.length >= 3) {
+      bodyAnalysis = analyzeBodyPatterns(sequenceData);
+      ctaAnalysis = analyzeCTAPatterns(sequenceData);
+    }
+
     // Build enhanced lead details from replies
     const campaignMap = new Map(campaigns.map(c => [c.id, c.name]));
     const leadsMap = new Map<string, InterestedLeadDetail>();
@@ -522,7 +663,11 @@ export async function GET(request: Request) {
         emailPositives: totalInterested, // Sum from campaign stats (authoritative)
       },
       campaigns: campaignPerformances,
-      copyAnalysis,
+      copyAnalysis: {
+        ...copyAnalysis,
+        body: bodyAnalysis,
+        cta: ctaAnalysis,
+      },
       interestedLeads,
       filters: {
         campaigns: uniqueCampaigns,

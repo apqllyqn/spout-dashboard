@@ -248,8 +248,22 @@ export interface SubjectAnalysis {
   };
 }
 
+export interface BodyAnalysis {
+  topHooks: string[];
+  bottomHooks: string[];
+  keyPattern: string;
+}
+
+export interface CTAAnalysis {
+  topCTAs: string[];
+  bottomCTAs: string[];
+  keyPattern: string;
+}
+
 export interface CopyAnalysis {
   subjects: SubjectAnalysis;
+  body?: BodyAnalysis;
+  cta?: CTAAnalysis;
   summary: {
     topAvgInterest: number;
     bottomAvgInterest: number;
