@@ -265,10 +265,11 @@ export async function GET(request: Request) {
 
     // Fetch all campaigns
     const { data: campaigns } = await fetchApi<{ data: Campaign[] }>('/api/campaigns');
-    // Only include Active, Completed, Launching campaigns (exclude Draft, Paused, Failed, Archived, Stopped)
+    // Only include active, completed, launching campaigns (exclude draft, paused, failed, archived, stopped)
+    // Note: API returns lowercase status values
     const activeCampaigns = campaigns.filter(c =>
       c.emails_sent > 0 &&
-      ['Active', 'Completed', 'Launching'].includes(c.status)
+      ['active', 'completed', 'launching'].includes(c.status.toLowerCase())
     );
 
     // Fetch interested replies from Inbox folder (paginated)
