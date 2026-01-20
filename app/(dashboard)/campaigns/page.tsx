@@ -17,7 +17,13 @@ export default function CampaignsPage() {
         const response = await fetch('/api/emailbison/campaigns');
         if (!response.ok) throw new Error('Failed to fetch campaigns');
         const data = await response.json();
-        setCampaigns(data.data || []);
+        // Filter to only active campaigns with sent emails (same as report)
+        const allCampaigns = data.data || [];
+        const activeCampaigns = allCampaigns.filter((c: Campaign) =>
+          c.emails_sent > 0 &&
+          ['active', 'completed', 'launching'].includes(c.status.toLowerCase())
+        );
+        setCampaigns(activeCampaigns);
       } catch (error) {
         console.error('Error fetching campaigns:', error);
         toast.error('Failed to load campaigns');
@@ -29,7 +35,7 @@ export default function CampaignsPage() {
     fetchCampaigns();
   }, []);
 
-  // Calculate accurate aggregate stats
+  // Calculate accurate aggregate stats (same formula as report)
   const stats = useMemo(() => {
     const totals = campaigns.reduce(
       (acc, c) => ({
@@ -41,6 +47,7 @@ export default function CampaignsPage() {
       { leadsContacted: 0, interested: 0, replies: 0, sent: 0 }
     );
 
+    // Response rate = interested / leads contacted (not emails sent)
     const responseRate = totals.leadsContacted > 0
       ? Math.round((totals.interested / totals.leadsContacted) * 1000) / 10
       : 0;
