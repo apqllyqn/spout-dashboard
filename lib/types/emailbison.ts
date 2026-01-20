@@ -225,11 +225,9 @@ export interface CampaignPerformance {
   // Extended stats for expanded view
   leadsContacted?: number;
   emailsSent?: number;
-  uniqueOpens?: number;
   uniqueReplies?: number;
   interested?: number;
   bounced?: number;
-  openRate?: number;
   bounceRate?: number;
 }
 

@@ -265,7 +265,11 @@ export async function GET(request: Request) {
 
     // Fetch all campaigns
     const { data: campaigns } = await fetchApi<{ data: Campaign[] }>('/api/campaigns');
-    const activeCampaigns = campaigns.filter(c => c.emails_sent > 0);
+    // Only include Active, Completed, Launching campaigns (exclude Draft, Paused, Failed, Archived, Stopped)
+    const activeCampaigns = campaigns.filter(c =>
+      c.emails_sent > 0 &&
+      ['Active', 'Completed', 'Launching'].includes(c.status)
+    );
 
     // Fetch interested replies from Inbox folder (paginated)
     // Note: API ignores per_page and returns 15 per page, so we need many pages
@@ -356,13 +360,9 @@ export async function GET(request: Request) {
         // Extended stats for expanded view
         leadsContacted: campaign.total_leads_contacted,
         emailsSent: campaign.emails_sent,
-        uniqueOpens: campaign.unique_opens,
         uniqueReplies: campaign.unique_replies,
         interested: campaign.interested,
         bounced: campaign.bounced,
-        openRate: campaign.emails_sent > 0
-          ? parseFloat(((campaign.unique_opens / campaign.emails_sent) * 100).toFixed(2))
-          : 0,
         bounceRate: campaign.emails_sent > 0
           ? parseFloat(((campaign.bounced / campaign.emails_sent) * 100).toFixed(2))
           : 0,
@@ -427,7 +427,8 @@ export async function GET(request: Request) {
     const totalLeadsContacted = activeCampaigns.reduce((sum, c) => sum + c.total_leads_contacted, 0);
     const totalReplies = activeCampaigns.reduce((sum, c) => sum + c.unique_replies, 0);
     const totalInterested = activeCampaigns.reduce((sum, c) => sum + c.interested, 0);
-    const avgResponseRate = totalSent > 0 ? (totalReplies / totalSent) * 100 : 0;
+    // Use total_leads_contacted (unique people) not emails_sent (includes follow-ups)
+    const avgResponseRate = totalLeadsContacted > 0 ? (totalReplies / totalLeadsContacted) * 100 : 0;
 
     // Convert to array and sort by date (most recent first)
     let interestedLeads = Array.from(leadsMap.values());

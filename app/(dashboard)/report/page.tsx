@@ -165,7 +165,7 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                       <td colSpan={6} className="p-6">
                         <div className="space-y-4">
                           {/* Stats Grid */}
-                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Leads Reached</p>
                               <p className="font-bold text-lg">{campaign.leadsContacted?.toLocaleString() || 0}</p>
@@ -173,14 +173,6 @@ function CampaignPerformanceTable({ campaigns }: { campaigns: CampaignPerformanc
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Emails Sent</p>
                               <p className="font-bold text-lg">{campaign.emailsSent?.toLocaleString() || 0}</p>
-                            </div>
-                            <div className="bg-card rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground mb-1">Opens</p>
-                              <p className="font-bold text-lg">{campaign.uniqueOpens?.toLocaleString() || 0}</p>
-                            </div>
-                            <div className="bg-card rounded-lg p-3 border">
-                              <p className="text-xs text-muted-foreground mb-1">Open Rate</p>
-                              <p className="font-bold text-lg">{campaign.openRate || 0}%</p>
                             </div>
                             <div className="bg-card rounded-lg p-3 border">
                               <p className="text-xs text-muted-foreground mb-1">Replies</p>
